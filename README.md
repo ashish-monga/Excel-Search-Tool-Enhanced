@@ -1,7 +1,7 @@
 # Excel-Search-Tool-Enhanced
 Excel Search Tool Enhanced
 
-This HTML file (`indexfinal2_enhanced_defaultContent.html`) is a **standalone web tool** designed for searching within Excel files.
+This HTML file (Excel-Search-Tool-Enhanced) is a **standalone web tool** designed for searching within Excel files.
 
 ## Features
 - 📂 Upload `.xlsx`, `.xls`, or `.xlsm` files directly in the browser.
