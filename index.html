@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Excel Search Tool — Enhanced (Contacts & Matching Line)</title>
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Excel Search Tool — Enhanced (Contacts &amp; Matching Line)</title>
+<style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
     .container { max-width: 980px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
     input[type="file"], select, button, input[type="text"] {
@@ -35,61 +36,51 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Excel Search Tool — Enhanced</h2>
-    <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" />
-
-    <div class="row">
-      <div>
-        <label for="searchMode">Search mode:</label>
-        <select id="searchMode">
-          <option value="1" selected>1 keyword</option>
-          <option value="2">2 keywords</option>
-          <option value="3">3 keywords</option>
-          <option value="4">Exact phrase</option>
-        </select>
-      </div>
-      <div>
-        <label for="searchColumn">Column to search (from file):</label>
-        <select id="searchColumn"></select>
-      </div>
-    </div>
-
-    <div id="keywordInputs"></div>
-
-    <div id="sequentialToggleContainer" class="hidden" style="margin-bottom: 12px;">
-      <label><input type="checkbox" id="sequentialToggle" /> Match keywords in sequence (Keyword 1 → Keyword 2 → Keyword 3)</label>
-    </div>
-
-    <label>Columns to include in output (from file):</label>
-    <div class="dropdown-checkboxes" id="outputColumnDropdown">
-      <input type="text" readonly placeholder="Select output columns" onclick="toggleCheckboxMenu()" />
-      <div class="checkbox-menu" id="checkboxMenu"></div>
-    </div>
-
-    <div class="optline">
-      <label><input type="checkbox" id="keepOnlyMatchingLine" checked /> Keep only the matching line (not full message)</label>
-      <label><input type="checkbox" id="appendContact" checked /> Append contact label + unique phone numbers to Content</label>
-      <label><input type="checkbox" id="createNumbersCol" checked /> Copy phone numbers to new column <b>ContactNumbers</b></label>
-      <label><input type="checkbox" id="dedupeRows" checked /> Drop duplicate rows</label>
-      <label><input type="checkbox" id="dedupeNumbers" checked /> De-dup numbers per line</label>
-    </div>
-    <div class="note">These options implement your criteria without changing existing behaviors unless boxes are checked.</div>
-
-    <button onclick="processFile()">Search</button>
-
-    <div class="download-buttons hidden" id="downloadSection">
-      <button onclick="downloadHTML()">Download HTML</button>
-      <button onclick="downloadExcel()">Download Excel</button>
-    </div>
-
-    <div id="resultCount"></div>
-    <table id="resultTable"></table>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
-
-  <script>
+<div class="container">
+<h2>Excel Search Tool — Enhanced</h2>
+<input accept=".xlsx,.xls,.xlsm" id="fileInput" type="file"/>
+<div class="row">
+<div>
+<label for="searchMode">Search mode:</label>
+<select id="searchMode">
+<option selected="" value="1">1 keyword</option>
+<option value="2">2 keywords</option>
+<option value="3">3 keywords</option>
+<option value="4">Exact phrase</option>
+</select>
+</div>
+<div>
+<label for="searchColumn">Column to search (from file):</label>
+<select id="searchColumn"></select>
+</div>
+</div>
+<div id="keywordInputs"></div>
+<div class="hidden" id="sequentialToggleContainer" style="margin-bottom: 12px;">
+<label><input id="sequentialToggle" type="checkbox"/> Match keywords in sequence (Keyword 1 → Keyword 2 → Keyword 3)</label>
+</div>
+<label>Columns to include in output (from file):</label>
+<div class="dropdown-checkboxes" id="outputColumnDropdown">
+<input onclick="toggleCheckboxMenu()" placeholder="Select output columns" readonly="" type="text"/>
+<div class="checkbox-menu" id="checkboxMenu"></div>
+</div>
+<div class="optline">
+<label><input checked="" id="keepOnlyMatchingLine" type="checkbox"/> Keep only the matching line (not full message)</label>
+<label><input checked="" id="appendContact" type="checkbox"/> Append contact label + unique phone numbers to Content</label>
+<label><input checked="" id="createNumbersCol" type="checkbox"/> Copy phone numbers to new column <b>ContactNumbers</b></label>
+<label><input checked="" id="dedupeRows" type="checkbox"/> Drop duplicate rows</label>
+<label><input checked="" id="dedupeNumbers" type="checkbox"/> De-dup numbers per line</label>
+</div>
+<div class="note">These options implement your criteria without changing existing behaviors unless boxes are checked.</div>
+<button onclick="processFile()">Search</button>
+<div class="download-buttons hidden" id="downloadSection">
+<button onclick="downloadHTML()">Download HTML</button>
+<button onclick="downloadExcel()">Download Excel</button>
+</div>
+<div id="resultCount"></div>
+<table id="resultTable"></table>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+<script>
     let workbookData = [], headers = [], results = [], outputCols = [], searchColIdx = 0, searchKeywords = [];
     let dateColIndices = [];
 
@@ -158,6 +149,7 @@
         opt.value = idx;
         opt.textContent = header;
         select.appendChild(opt);
+      if (header.toLowerCase() === 'content') { select.value = idx; }
       });
     }
 
