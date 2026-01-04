@@ -108,8 +108,8 @@
                 <div>
                     <h1 class="text-xl font-bold text-slate-800 leading-tight">Excel Search Tool</h1>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 13.2</span>
-                        <span class="text-xs text-slate-400">Multi-File • Sortable • Modern</span>
+                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 15.0</span>
+                        <span class="text-xs text-slate-400">Snippet View • Multi-File • Modern</span>
                     </div>
                 </div>
             </div>
@@ -221,14 +221,14 @@
                         <div class="col-span-2">
                              <select id="fontSizeSelect" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-blue-500 p-2 font-medium">
                                 <option value="text-sm">Font: Small</option>
-                                <option value="text-[26px]" selected>Font: Large </option>
+                                <option value="text-[26px]" selected>Font: Large (26px)</option>
                             </select>
                         </div>
 
-                        <!-- Toggles: ALL CHECKED BY DEFAULT -->
+                        <!-- Toggles: ALL CHECKED BY DEFAULT (as per original logic, only columns unchecked) -->
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                             <input type="checkbox" id="keepLine" checked class="custom-checkbox rounded text-blue-600 mr-3">
-                            <span class="text-sm font-medium text-slate-600">Match Only</span>
+                            <span class="text-sm font-medium text-slate-600">Match Only (Snippet)</span>
                         </label>
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                             <input type="checkbox" id="dropDuplicates" checked class="custom-checkbox rounded text-blue-600 mr-3">
@@ -295,7 +295,7 @@
     </div>
 
 <script>
-// --- LOGIC SECTION (Preserved from V11/12) ---
+// --- LOGIC SECTION ---
 
 let workbookData = [];
 let headers = [];
@@ -595,10 +595,11 @@ function populateSearchColumns() {
 function populateOutputCheckboxes() {
     columnDropdown.innerHTML = "";
     
+    // Select All (UNCHECKED BY DEFAULT)
     const selectAllDiv = document.createElement("div");
     selectAllDiv.className = "flex items-center p-3 hover:bg-slate-50 rounded-lg cursor-pointer border-b border-slate-100 mb-1";
     selectAllDiv.innerHTML = `
-        <input type="checkbox" id="selectAllCols" class="custom-checkbox rounded text-blue-600 mr-3" checked>
+        <input type="checkbox" id="selectAllCols" class="custom-checkbox rounded text-blue-600 mr-3">
         <label for="selectAllCols" class="text-sm font-bold text-slate-700 cursor-pointer uppercase">Select All</label>
     `;
     columnDropdown.appendChild(selectAllDiv);
@@ -606,8 +607,9 @@ function populateOutputCheckboxes() {
     headers.forEach((h, i) => {
         const div = document.createElement("div");
         div.className = "flex items-center p-2.5 hover:bg-slate-50 rounded-lg cursor-pointer";
+        // Checkboxes (UNCHECKED BY DEFAULT)
         div.innerHTML = `
-            <input type="checkbox" value="${i}" class="col-checkbox custom-checkbox rounded text-blue-600 mr-3" checked>
+            <input type="checkbox" value="${i}" class="col-checkbox custom-checkbox rounded text-blue-600 mr-3">
             <label class="text-sm font-medium text-slate-600 cursor-pointer truncate select-none">${h || `Column ${i+1}`}</label>
         `;
         div.addEventListener("click", (e) => {
@@ -659,6 +661,66 @@ function toSentenceCase(str) {
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+}
+
+// === SNIPPET GENERATION LOGIC ===
+function generateSnippet(text, keywords) {
+    // 1. Convert text to sentence case first (base for display)
+    const baseText = toSentenceCase(text);
+    const lowerText = baseText.toLowerCase(); // for searching
+    const contextRadius = 60; // characters before/after
+    
+    // 2. Find all keyword matches indices
+    let ranges = [];
+    
+    // Sort keywords by length desc to prioritize longer matches
+    const sortedKeys = [...keywords].sort((a,b) => b.length - a.length);
+    
+    // Find all matches
+    sortedKeys.forEach(k => {
+        const keyLower = k.toLowerCase();
+        let pos = lowerText.indexOf(keyLower);
+        while (pos !== -1) {
+            // Add range [start, end] including context
+            const start = Math.max(0, pos - contextRadius);
+            const end = Math.min(baseText.length, pos + keyLower.length + contextRadius);
+            ranges.push({start, end});
+            pos = lowerText.indexOf(keyLower, pos + 1);
+        }
+    });
+    
+    if (ranges.length === 0) return baseText; // Fallback
+    
+    // 3. Merge overlapping ranges
+    ranges.sort((a,b) => a.start - b.start);
+    
+    let merged = [];
+    if (ranges.length > 0) {
+        let current = ranges[0];
+        for (let i = 1; i < ranges.length; i++) {
+            if (ranges[i].start <= current.end) {
+                // Overlap or adjacent, extend current
+                current.end = Math.max(current.end, ranges[i].end);
+            } else {
+                // No overlap, push current and start new
+                merged.push(current);
+                current = ranges[i];
+            }
+        }
+        merged.push(current);
+    }
+    
+    // 4. Construct Snippet String
+    let snippet = "";
+    merged.forEach((r, i) => {
+        if (i > 0 || r.start > 0) snippet += " ... ";
+        snippet += baseText.substring(r.start, r.end);
+    });
+    if (merged.length > 0 && merged[merged.length-1].end < baseText.length) {
+        snippet += " ...";
+    }
+    
+    return snippet;
 }
 
 function processFile() {
@@ -716,8 +778,19 @@ function processFile() {
 
         if (keepLine && !isMatch) continue;
 
-        let formattedText = toSentenceCase(String(cellValue || ""));
+        // --- SNIPPET LOGIC START ---
+        let formattedText = "";
         
+        // Step 1: Generate Base Text (Full vs Snippet)
+        if (keepLine && isMatch) {
+            // Generate Context Snippet
+            formattedText = generateSnippet(String(cellValue || ""), keys);
+        } else {
+            // Full Text (Sentence Case)
+            formattedText = toSentenceCase(String(cellValue || ""));
+        }
+        
+        // Step 2: Highlight Keywords in the result text (Snippet or Full)
         if (isMatch && keys.length > 0) {
             const sortedKeys = [...keys].sort((a,b) => b.length - a.length);
             const pattern = new RegExp(`(${sortedKeys.map(escapeRegExp).join("|")})`, "gi");
@@ -726,6 +799,7 @@ function processFile() {
                 return `<span class="highlight">${match.toUpperCase()}</span>`;
             });
         }
+        // --- SNIPPET LOGIC END ---
         
         if (appendContact) {
             const nums = extractNumbers(cellValue, dedupNumbers);
