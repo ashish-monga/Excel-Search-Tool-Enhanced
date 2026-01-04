@@ -108,7 +108,7 @@
                 <div>
                     <h1 class="text-xl font-bold text-slate-800 leading-tight">Excel Search Tool</h1>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 13.0</span>
+                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 13.2</span>
                         <span class="text-xs text-slate-400">Multi-File • Sortable • Modern</span>
                     </div>
                 </div>
@@ -181,6 +181,8 @@
                                 <option value="3">3 Keywords (AND)</option>
                                 <option value="4">Exact Phrase</option>
                                 <option value="hospital">Hospital (Intent)</option>
+                                <option value="school">School (Intent)</option>
+                                <option value="college">College (Intent)</option>
                             </select>
                         </div>
                     </div>
@@ -219,11 +221,11 @@
                         <div class="col-span-2">
                              <select id="fontSizeSelect" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-blue-500 p-2 font-medium">
                                 <option value="text-sm">Font: Small</option>
-                                <option value="text-[26px]" selected>Font: Large (26px)</option>
+                                <option value="text-[26px]" selected>Font: Large </option>
                             </select>
                         </div>
 
-                        <!-- Toggles -->
+                        <!-- Toggles: ALL CHECKED BY DEFAULT -->
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                             <input type="checkbox" id="keepLine" checked class="custom-checkbox rounded text-blue-600 mr-3">
                             <span class="text-sm font-medium text-slate-600">Match Only</span>
@@ -233,7 +235,7 @@
                             <span class="text-sm font-medium text-slate-600">Unique Rows</span>
                         </label>
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
-                            <input type="checkbox" id="appendContact" class="custom-checkbox rounded text-blue-600 mr-3">
+                            <input type="checkbox" id="appendContact" checked class="custom-checkbox rounded text-blue-600 mr-3">
                             <span class="text-sm font-medium text-slate-600">Add Phone</span>
                         </label>
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
@@ -304,6 +306,8 @@ let results = [];
 let outputCols = [];
 let currentSort = { col: -1, dir: 'asc' };
 
+// --- KEYWORD DEFINITIONS ---
+
 const HOSPITAL_INTENT = [
     "running hospital","operational hospital","functional hospital","existing hospital",
     "hospital with beds","hospital beds","bed hospital","speciality hospital",
@@ -311,7 +315,22 @@ const HOSPITAL_INTENT = [
     "hospital structure","hospital structure only","hospital approved land",
     "land for hospital","reserved for hospital","medical land",
     "institutional land hospital","hospital for sale","hospital available","hospital property",
-    "nursing home", "clinic space", "medical center"
+    "nursing home", "clinic space", "medical center",
+    // Added new institutional terms
+    "institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land"
+];
+
+const SCHOOL_INTENT = [
+    "school land", "school land for sale", "school plot", "school plots", "school site", "school site available", "school building", "school property", "school campus", "school available", "school at", "school road", "school main road", "school and college", "school and hospital", "running school", "running nursery school", "play school running", "cbse school operational", "nursery school", "nursary school", "play school", "public school", "primary school", "cbse school", "dps school", "boarding school", "day school", "hospital school", "hotel school", "school and hospital", "school and college", "sale school", "cbse",
+    // Institutional terms for school as well
+    "institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land"
+];
+
+const COLLEGE_INTENT = [
+    // Institutional terms
+    "institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land",
+    // College terms
+    "college", "medical college", "institutional land", "school and college", "hospital and college", "running medical college", "existing engineering college", "private nursing college", "college land", "college land for sale", "college plot on main road", "college campus available", "medical college", "engineering college", "nursing college", "pharmacy college", "degree college", "running college", "existing college", "government college", "private college", "hotel college", "school and college", "hospital and college", "land college", "college land", "college plot", "college campus", "college building", "college site", "college available", "college for sale", "college road", "college and hospital", "college and school", "college property"
 ];
 
 // References
@@ -371,11 +390,26 @@ function renderKeywordInputs() {
     keywordInputsDiv.innerHTML = "";
     const mode = searchMode.value;
     
-    if (mode === "hospital") {
+    // Helper to create info box
+    const createInfoBox = (intentName, count) => {
         const info = document.createElement("div");
         info.className = "text-sm font-medium text-blue-700 bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex items-start gap-2";
-        info.innerHTML = `<i class="fa-solid fa-circle-info mt-0.5"></i> <span>Searching for ${HOSPITAL_INTENT.length} hospital terms.</span>`;
+        info.innerHTML = `<i class="fa-solid fa-circle-info mt-0.5"></i> <span>Searching for ${count} ${intentName} terms.</span>`;
         keywordInputsDiv.appendChild(info);
+    };
+
+    if (mode === "hospital") {
+        createInfoBox("Hospital", HOSPITAL_INTENT.length);
+        return;
+    }
+    
+    if (mode === "school") {
+        createInfoBox("School", SCHOOL_INTENT.length);
+        return;
+    }
+
+    if (mode === "college") {
+        createInfoBox("College", COLLEGE_INTENT.length);
         return;
     }
 
@@ -638,9 +672,10 @@ function processFile() {
     const dedupNumbers = document.getElementById("dedupNumbers").checked;
 
     let keys = [];
-    if (mode === "hospital") {
-        keys = HOSPITAL_INTENT;
-    } else {
+    if (mode === "hospital") keys = HOSPITAL_INTENT;
+    else if (mode === "school") keys = SCHOOL_INTENT;
+    else if (mode === "college") keys = COLLEGE_INTENT;
+    else {
         const inputs = document.querySelectorAll(".keyword-input");
         inputs.forEach(inp => {
             if (inp.value.trim()) keys.push(inp.value.trim().toLowerCase());
@@ -667,7 +702,7 @@ function processFile() {
         
         let isMatch = false;
 
-        if (mode === "hospital") {
+        if (mode === "hospital" || mode === "school" || mode === "college") {
             isMatch = keys.some(k => cellText.includes(k));
         } else if (mode === "4") {
             if (keys.length > 0) isMatch = cellText.includes(keys[0]);
