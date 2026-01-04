@@ -108,7 +108,7 @@
                 <div>
                     <h1 class="text-xl font-bold text-slate-800 leading-tight">Excel Search Tool</h1>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 16.0</span>
+                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 16.1</span>
                         <span class="text-xs text-slate-400">Snippet View • Multi-File • Modern</span>
                     </div>
                 </div>
@@ -217,11 +217,11 @@
 
                     <!-- Options Grid -->
                     <div class="grid grid-cols-2 gap-3">
-                        <!-- Font Size -->
+                        <!-- Font Size (DEFAULT: SMALL) -->
                         <div class="col-span-2">
                              <select id="fontSizeSelect" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-blue-500 p-2 font-medium">
-                                <option value="text-sm">Font: Small</option>
-                                <option value="text-[26px]" selected>Font: Large </option>
+                                <option value="text-sm" selected>Font: Small</option>
+                                <option value="text-[26px]">Font: Large </option>
                             </select>
                         </div>
 
@@ -240,7 +240,7 @@
                         </label>
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                             <input type="checkbox" id="createNumbers" checked class="custom-checkbox rounded text-blue-600 mr-3">
-                            <span class="text-sm font-medium text-slate-600">Phone Column</span>
+                            <span class="text-sm font-medium text-slate-600">Phone Col</span>
                         </label>
                          <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer col-span-2">
                             <input type="checkbox" id="dedupNumbers" checked class="custom-checkbox rounded text-blue-600 mr-3">
@@ -287,7 +287,8 @@
                     <thead class="bg-slate-50/90 backdrop-blur sticky top-0 z-10 shadow-sm">
                         <tr id="tableHeader"></tr>
                     </thead>
-                    <tbody id="tableBody" class="bg-white divide-y divide-slate-100 text-[26px] font-bold text-slate-800 leading-relaxed"></tbody>
+                    <!-- Default to 'text-sm' initially -->
+                    <tbody id="tableBody" class="bg-white divide-y divide-slate-100 text-sm font-bold text-slate-800 leading-relaxed"></tbody>
                 </table>
             </div>
         </div>
