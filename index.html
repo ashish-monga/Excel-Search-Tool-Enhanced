@@ -36,7 +36,7 @@
             <div>
                 <h1 class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-3">
                     <i class="fa-solid fa-file-excel text-green-600"></i>
-                    Excel Search Tool <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-1 rounded">Ver 7.0</span>
+                    Excel Search Tool <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-1 rounded">Ver 7.1</span>
                 </h1>
                 <p class="text-slate-500 mt-1 text-sm">Upload, filter, and extract data efficiently.</p>
             </div>
@@ -114,6 +114,18 @@
                         </button>
                         <div id="columnDropdown" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto p-2 space-y-1"></div>
                     </div>
+                </div>
+
+                <!-- Font Size Selector (NEW) -->
+                <div class="mb-3">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-wide">Result Font Size</label>
+                    <select id="fontSizeSelect" class="w-full rounded-lg border-slate-300 border bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mt-1">
+                        <option value="text-sm">Small (14px)</option>
+                        <option value="text-base">Medium (16px)</option>
+                        <option value="text-[17px]" selected>Large (17px)</option>
+                        <option value="text-lg">Extra Large (18px)</option>
+                        <option value="text-xl">Huge (20px)</option>
+                    </select>
                 </div>
 
                 <!-- THE 5 OPTIONS RESTORED -->
@@ -221,6 +233,7 @@ const tableHeader = document.getElementById("tableHeader");
 const resultTable = document.getElementById("resultTable");
 const emptyState = document.getElementById("emptyState");
 const globalStatus = document.getElementById("globalStatus");
+const fontSizeSelect = document.getElementById('fontSizeSelect');
 
 // Initialize
 renderKeywordInputs();
@@ -247,6 +260,17 @@ document.addEventListener("click", (e) => {
 });
 
 fileInput.addEventListener("change", handleFileUpload);
+
+// Font Size Change Listener
+fontSizeSelect.addEventListener('change', () => {
+    // Remove existing size classes
+    const classesToRemove = ['text-sm', 'text-base', 'text-[17px]', 'text-lg', 'text-xl'];
+    classesToRemove.forEach(cls => tableBody.classList.remove(cls));
+    
+    // Add new size class
+    tableBody.classList.add(fontSizeSelect.value);
+});
+
 
 // --- Functions ---
 
@@ -545,6 +569,12 @@ function displayResults(hasNumbers) {
 
     emptyState.classList.add("hidden");
     resultTable.classList.remove("hidden");
+    
+    // Ensure the current selected font size is applied (if results re-rendered)
+    const currentSize = fontSizeSelect.value;
+    // We can't rely on body class, we need to apply to rows or tbody
+    // The tbody already has the class, so we are good.
+    // Wait, if we clear innerHTML, the class on tbody persists.
     
     const rowsHTML = results.map(row => {
         return `<tr class="hover:bg-slate-50 transition-colors">` + 
