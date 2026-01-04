@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Search Tool - Enhanced</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Added Inter font for better mobile readability -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; /* Applied Inter font globally */
+        }
+        .highlight {
+            background-color: #fef08a; /* yellow-200 */
+            font-weight: bold;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        /* Checkbox custom style */
+        .custom-checkbox {
+            accent-color: #2563eb;
+            width: 18px; /* Slightly larger touch target */
+            height: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <div class="max-w-[1600px] mx-auto p-4 md:p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-3">
+                    <i class="fa-solid fa-file-excel text-green-600"></i>
+                    Excel Search Tool <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-1 rounded">Ver 7.0</span>
+                </h1>
+                <p class="text-slate-500 mt-1 text-sm">Upload, filter, and extract data efficiently.</p>
+            </div>
+            <!-- Status Badge -->
+             <div id="globalStatus" class="text-xs font-medium text-slate-400 px-3 py-1 bg-slate-100 rounded-full hidden">
+                Ready
+            </div>
+        </div>
+
+        <!-- Control Panel (Top Row) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            
+            <!-- 1. Upload File -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">1</span>
+                    <label class="block text-base font-semibold text-slate-700">Upload File</label>
+                </div>
+                
+                <div class="relative group flex-1">
+                    <!-- Increased text size to text-base (16px) to prevent iOS zoom -->
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" 
+                        class="block w-full text-base text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all h-full">
+                </div>
+                <p id="fileStats" class="text-sm text-slate-400 mt-2 hidden">No file loaded</p>
+            </div>
+
+            <!-- 2. Search Config -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">2</span>
+                    <label class="block text-base font-semibold text-slate-700">Search Configuration</label>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wide">Column</label>
+                        <!-- Text-base for readability -->
+                        <select id="searchColumn" class="mt-1 w-full rounded-lg border-slate-300 border bg-white px-3 py-2 text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400" disabled>
+                            <option>Wait for file...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wide">Mode</label>
+                        <!-- Text-base for readability -->
+                        <select id="searchMode" class="mt-1 w-full rounded-lg border-slate-300 border bg-white px-3 py-2 text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                            <option value="1">1 Keyword</option>
+                            <option value="2">2 Keywords (AND)</option>
+                            <option value="3">3 Keywords (AND)</option>
+                            <option value="4">Exact Phrase</option>
+                            <option value="hospital">Hospital (Intent)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="keywordInputs" class="space-y-2 overflow-y-auto max-h-[150px] pr-1">
+                    <!-- Dynamic inputs go here -->
+                </div>
+            </div>
+
+            <!-- 3. Output Settings -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">3</span>
+                    <label class="block text-base font-semibold text-slate-700">Output & Action</label>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="relative">
+                        <!-- Text-base for button -->
+                        <button id="toggleColumnsBtn" class="w-full text-left bg-slate-50 border border-slate-300 text-slate-700 text-base rounded-lg px-3 py-2 flex justify-between items-center hover:bg-slate-100 transition-colors" disabled>
+                            <span>Select Output Columns</span>
+                            <i class="fa-solid fa-chevron-down text-sm"></i>
+                        </button>
+                        <div id="columnDropdown" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto p-2 space-y-1"></div>
+                    </div>
+                </div>
+
+                <!-- THE 5 OPTIONS RESTORED -->
+                <!-- Increased text size from text-xs to text-sm for labels -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-2 mb-4">
+                    <label class="flex items-center space-x-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded">
+                        <input type="checkbox" id="keepLine" checked class="custom-checkbox">
+                        <span class="text-sm text-slate-600 group-hover:text-slate-900 leading-tight">Keep only matching line</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded">
+                        <input type="checkbox" id="appendContact" class="custom-checkbox">
+                        <span class="text-sm text-slate-600 group-hover:text-slate-900 leading-tight">Append contact + numbers</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded">
+                        <input type="checkbox" id="createNumbers" checked class="custom-checkbox">
+                        <span class="text-sm text-slate-600 group-hover:text-slate-900 leading-tight">Create ContactNumbers</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded">
+                        <input type="checkbox" id="dropDuplicates" checked class="custom-checkbox">
+                        <span class="text-sm text-slate-600 group-hover:text-slate-900 leading-tight">Drop duplicate rows</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded">
+                        <input type="checkbox" id="dedupNumbers" checked class="custom-checkbox">
+                        <span class="text-sm text-slate-600 group-hover:text-slate-900 leading-tight">De-dup numbers</span>
+                    </label>
+                </div>
+
+                <button onclick="processFile()" id="searchBtn" disabled
+                    class="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-sm transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-base">
+                    <i class="fa-solid fa-magnifying-glass"></i> Run Search
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Results Area (Full Width) -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-[600px]">
+            
+            <!-- Result Toolbar -->
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-base font-bold text-slate-700">Results</h2>
+                    <span id="resultStatus" class="text-sm font-medium text-slate-500 bg-white border border-slate-200 px-2.5 py-1 rounded-md">
+                        Waiting for input...
+                    </span>
+                </div>
+                <div id="downloadButtons" class="hidden flex gap-2">
+                    <button onclick="downloadHTML()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium py-2 px-3 rounded shadow-sm transition-colors">
+                        <i class="fa-brands fa-html5 mr-1 text-orange-500"></i> HTML
+                    </button>
+                    <button onclick="downloadExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded shadow-sm transition-colors">
+                        <i class="fa-solid fa-file-excel mr-1"></i> Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Table Container -->
+            <div class="flex-1 overflow-auto p-0 relative w-full">
+                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-white">
+                    <div class="bg-slate-50 p-6 rounded-full mb-4">
+                        <i class="fa-solid fa-table-cells text-4xl text-slate-300"></i>
+                    </div>
+                    <p class="text-base font-medium text-slate-500">Data will appear here</p>
+                    <p class="text-sm text-slate-400 mt-1">Upload a file and run a search to begin</p>
+                </div>
+                <table id="resultTable" class="min-w-full divide-y divide-slate-200 hidden border-collapse">
+                    <thead class="bg-slate-50 sticky top-0 z-10 shadow-sm ring-1 ring-slate-900/5">
+                        <tr id="tableHeader"></tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-slate-200 text-[15px] text-slate-600"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+let workbookData = [];
+let headers = [];
+let results = [];
+let outputCols = [];
+
+// Hospital Intent Keywords
+const HOSPITAL_INTENT = [
+    "running hospital","operational hospital","functional hospital","existing hospital",
+    "hospital with beds","hospital beds","bed hospital","speciality hospital",
+    "multispeciality hospital","hospital land","hospital plot","hospital building",
+    "hospital structure","hospital structure only","hospital approved land",
+    "land for hospital","reserved for hospital","medical land",
+    "institutional land hospital","hospital for sale","hospital available","hospital property",
+    "nursing home", "clinic space", "medical center"
+];
+
+// UI References
+const fileInput = document.getElementById("fileInput");
+const searchMode = document.getElementById("searchMode");
+const keywordInputsDiv = document.getElementById("keywordInputs");
+const searchColumnSel = document.getElementById("searchColumn");
+const columnDropdown = document.getElementById("columnDropdown");
+const toggleColumnsBtn = document.getElementById("toggleColumnsBtn");
+const searchBtn = document.getElementById("searchBtn");
+const resultStatus = document.getElementById("resultStatus");
+const downloadButtons = document.getElementById("downloadButtons");
+const tableBody = document.getElementById("tableBody");
+const tableHeader = document.getElementById("tableHeader");
+const resultTable = document.getElementById("resultTable");
+const emptyState = document.getElementById("emptyState");
+const globalStatus = document.getElementById("globalStatus");
+
+// Initialize
+renderKeywordInputs();
+
+// --- Event Listeners ---
+
+searchMode.addEventListener("change", renderKeywordInputs);
+
+toggleColumnsBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    columnDropdown.classList.toggle("hidden");
+    const icon = toggleColumnsBtn.querySelector("i");
+    icon.classList.toggle("fa-chevron-down");
+    icon.classList.toggle("fa-chevron-up");
+});
+
+document.addEventListener("click", (e) => {
+    if (!toggleColumnsBtn.contains(e.target) && !columnDropdown.contains(e.target)) {
+        columnDropdown.classList.add("hidden");
+        const icon = toggleColumnsBtn.querySelector("i");
+        icon.classList.remove("fa-chevron-up");
+        icon.classList.add("fa-chevron-down");
+    }
+});
+
+fileInput.addEventListener("change", handleFileUpload);
+
+// --- Functions ---
+
+function renderKeywordInputs() {
+    keywordInputsDiv.innerHTML = "";
+    const mode = searchMode.value;
+    
+    if (mode === "hospital") {
+        const info = document.createElement("div");
+        info.className = "text-sm text-blue-600 bg-blue-50 p-3 rounded border border-blue-100 flex items-start gap-2";
+        info.innerHTML = `<i class="fa-solid fa-info-circle mt-0.5"></i> <span>Searching for ${HOSPITAL_INTENT.length} hospital terms.</span>`;
+        keywordInputsDiv.appendChild(info);
+        return;
+    }
+
+    const count = (mode === "4") ? 1 : parseInt(mode);
+    for (let i = 1; i <= count; i++) {
+        const inp = document.createElement("input");
+        // Increased to text-base for mobile input
+        inp.className = "keyword-input block w-full rounded border-slate-300 border bg-white px-3 py-2 text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-slate-400";
+        inp.placeholder = (mode === "4") ? "Exact phrase..." : `Keyword ${i}...`;
+        keywordInputsDiv.appendChild(inp);
+    }
+}
+
+function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Update UI
+    document.getElementById("fileStats").textContent = `Loaded: ${file.name}`;
+    document.getElementById("fileStats").classList.remove("hidden");
+    
+    globalStatus.textContent = "Processing...";
+    globalStatus.classList.remove("hidden");
+    
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Reading...';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            
+            // Read with header:1 to get array of arrays
+            workbookData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            
+            if (workbookData.length > 0) {
+                headers = workbookData[0].map(h => String(h || "").trim());
+                populateSearchColumns();
+                populateOutputCheckboxes();
+                
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Run Search';
+                toggleColumnsBtn.disabled = false;
+                searchColumnSel.disabled = false;
+                
+                resultStatus.textContent = `${workbookData.length - 1} rows ready.`;
+                globalStatus.textContent = "File Ready";
+                globalStatus.classList.add("bg-green-100", "text-green-700");
+            } else {
+                alert("The file appears to be empty.");
+                globalStatus.textContent = "Empty File";
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error reading file. Please ensure it is a valid Excel file.");
+            searchBtn.innerHTML = '<i class="fa-solid fa-exclamation-circle"></i> Error';
+            globalStatus.textContent = "Error";
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function populateSearchColumns() {
+    searchColumnSel.innerHTML = "";
+    headers.forEach((h, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = h || `Col ${i+1}`;
+        searchColumnSel.appendChild(opt);
+        
+        // Auto-select "Content" or "Description" or "Text"
+        const lowerH = h.toLowerCase();
+        if (lowerH.includes("content") || lowerH.includes("description") || lowerH === "text") {
+            searchColumnSel.value = i;
+        }
+    });
+}
+
+function populateOutputCheckboxes() {
+    columnDropdown.innerHTML = "";
+    
+    // Select All option
+    const selectAllDiv = document.createElement("div");
+    selectAllDiv.className = "flex items-center p-2 hover:bg-slate-50 rounded cursor-pointer border-b border-slate-100 mb-1";
+    selectAllDiv.innerHTML = `
+        <input type="checkbox" id="selectAllCols" class="rounded text-blue-600 focus:ring-blue-500 border-slate-300 mr-3 w-5 h-5" checked>
+        <label for="selectAllCols" class="text-sm font-bold text-slate-700 cursor-pointer uppercase">Select All</label>
+    `;
+    columnDropdown.appendChild(selectAllDiv);
+
+    headers.forEach((h, i) => {
+        const div = document.createElement("div");
+        div.className = "flex items-center p-2 hover:bg-slate-50 rounded cursor-pointer";
+        div.innerHTML = `
+            <input type="checkbox" value="${i}" class="col-checkbox rounded text-blue-600 focus:ring-blue-500 border-slate-300 mr-3 w-5 h-5" checked>
+            <label class="text-sm text-slate-600 cursor-pointer truncate select-none">${h || `Column ${i+1}`}</label>
+        `;
+        div.addEventListener("click", (e) => {
+             if(e.target.tagName !== 'INPUT') {
+                 const cb = div.querySelector('input');
+                 cb.checked = !cb.checked;
+                 updateColumnButtonText();
+             } else {
+                 updateColumnButtonText();
+             }
+        });
+        columnDropdown.appendChild(div);
+    });
+
+    // Handle Select All Logic
+    const selectAllCb = document.getElementById("selectAllCols");
+    selectAllCb.addEventListener("change", (e) => {
+        const checks = document.querySelectorAll(".col-checkbox");
+        checks.forEach(c => c.checked = e.target.checked);
+        updateColumnButtonText();
+    });
+
+    updateColumnButtonText();
+}
+
+function updateColumnButtonText() {
+    const checked = document.querySelectorAll(".col-checkbox:checked");
+    const total = document.querySelectorAll(".col-checkbox").length;
+    
+    const btnSpan = toggleColumnsBtn.querySelector("span");
+    if (checked.length === 0) btnSpan.textContent = "Select Output Columns";
+    else if (checked.length === total) btnSpan.textContent = "All Columns Selected";
+    else btnSpan.textContent = `${checked.length} Columns Selected`;
+}
+
+// Utility to extract phone numbers
+function extractNumbers(text, dedup) {
+    if (!text) return "";
+    // Regex for various phone formats
+    const matches = String(text).match(/(?:\+?\d{1,4}[\s-]?)?\(?\d{2,5}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/g) || [];
+    
+    // Clean
+    let nums = matches.map(m => m.replace(/[^\d+]/g, '').trim()).filter(n => n.length > 6);
+    
+    if (dedup) {
+        nums = [...new Set(nums)];
+    }
+    
+    return nums.join(", ");
+}
+
+function processFile() {
+    const colIdx = parseInt(searchColumnSel.value);
+    const mode = searchMode.value;
+    
+    // --- 5 OPTIONS LOGIC ---
+    const keepLine = document.getElementById("keepLine").checked;
+    const appendContact = document.getElementById("appendContact").checked;
+    const createNumbers = document.getElementById("createNumbers").checked;
+    const dropDuplicates = document.getElementById("dropDuplicates").checked;
+    const dedupNumbers = document.getElementById("dedupNumbers").checked;
+
+    // Get active search keywords
+    let keys = [];
+    if (mode === "hospital") {
+        keys = HOSPITAL_INTENT;
+    } else {
+        const inputs = document.querySelectorAll(".keyword-input");
+        inputs.forEach(inp => {
+            if (inp.value.trim()) keys.push(inp.value.trim().toLowerCase());
+        });
+    }
+
+    if (keys.length === 0 && keepLine) {
+        alert("Please enter at least one keyword.");
+        return;
+    }
+
+    // Get output column indices
+    const checkedBoxes = document.querySelectorAll(".col-checkbox:checked");
+    outputCols = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+    results = [];
+    const seenRows = new Set(); // For deduplication
+
+    for (let i = 1; i < workbookData.length; i++) {
+        const row = workbookData[i];
+        
+        // Handle rows shorter than header length
+        if (!row) continue;
+        
+        const cellValue = row[colIdx];
+        const cellText = String(cellValue || "").toLowerCase();
+        
+        let isMatch = false;
+
+        if (mode === "hospital") {
+            isMatch = keys.some(k => cellText.includes(k));
+        } else if (mode === "4") {
+            // Exact Phrase
+            if (keys.length > 0) isMatch = cellText.includes(keys[0]);
+        } else {
+            // AND logic (1, 2, 3 keywords)
+            if (keys.length > 0) {
+                isMatch = keys.every(k => cellText.includes(k));
+            } else {
+                // No keywords, treat as match unless keepLine is true
+                isMatch = true; 
+            }
+        }
+
+        // 1. Keep only matching line Logic
+        if (keepLine && !isMatch) continue;
+
+        // --- Output Generation ---
+        
+        // Prepare Highlighted Text
+        let highlighted = String(cellValue || "");
+        if (isMatch && keys.length > 0) {
+            const escapedKeys = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+            const pattern = new RegExp(`(${escapedKeys.join("|")})`, "gi");
+            highlighted = highlighted.replace(pattern, `<span class="highlight">$1</span>`);
+        }
+        
+        // 2. Append Contact + Numbers Logic (Append to the searched text)
+        // We find numbers in the cell, and append them if flag is checked
+        if (appendContact) {
+            const nums = extractNumbers(cellValue, dedupNumbers);
+            if (nums) {
+                const appendStr = ` (Extracted: ${nums})`;
+                highlighted += `<span class="text-gray-500 font-mono text-xs ml-2">${appendStr}</span>`;
+            }
+        }
+
+        const outRow = [];
+        
+        // Build a unique signature for row deduplication
+        // Note: We use the *selected output* columns for signature
+        const rowSignature = outputCols.map(c => row[c]).join("|");
+        
+        // 4. Drop Duplicate Rows Logic
+        if (dropDuplicates && seenRows.has(rowSignature)) continue;
+        if (dropDuplicates) seenRows.add(rowSignature);
+
+        // Map selected columns
+        outputCols.forEach(idx => {
+            if (idx === colIdx) {
+                outRow.push({ html: highlighted, text: String(cellValue || "") });
+            } else {
+                outRow.push({ html: row[idx] || "", text: row[idx] || "" });
+            }
+        });
+
+        // 3. Create ContactNumbers Logic (New Column)
+        if (createNumbers) {
+            // 5. De-dup Numbers Logic (Passed to extractNumbers)
+            const phones = extractNumbers(cellValue, dedupNumbers); 
+            outRow.push({ html: phones, text: phones });
+        }
+
+        results.push(outRow);
+    }
+
+    displayResults(createNumbers);
+}
+
+function displayResults(hasNumbers) {
+    // 1. Setup Header
+    let headerHTML = "";
+    outputCols.forEach(idx => {
+        headerHTML += `<th class="px-6 py-4 text-left text-sm font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">${headers[idx]}</th>`;
+    });
+    if (hasNumbers) {
+        headerHTML += `<th class="px-6 py-4 text-left text-sm font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">Extracted Numbers</th>`;
+    }
+    tableHeader.innerHTML = headerHTML;
+
+    // 2. Setup Body
+    if (results.length === 0) {
+        resultTable.classList.add("hidden");
+        emptyState.classList.remove("hidden");
+        resultStatus.textContent = "No matches found.";
+        downloadButtons.classList.add("hidden");
+        return;
+    }
+
+    emptyState.classList.add("hidden");
+    resultTable.classList.remove("hidden");
+    
+    const rowsHTML = results.map(row => {
+        return `<tr class="hover:bg-slate-50 transition-colors">` + 
+               row.map(cell => `<td class="px-6 py-4 whitespace-normal min-w-[150px] border-b border-slate-100 leading-relaxed">${cell.html}</td>`).join("") + 
+               `</tr>`;
+    }).join("");
+
+    tableBody.innerHTML = rowsHTML;
+    resultStatus.textContent = `${results.length} matches`;
+    downloadButtons.classList.remove("hidden");
+}
+
+function downloadHTML() {
+    const tableClone = resultTable.cloneNode(true);
+    tableClone.classList.remove("hidden");
+    
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Search Results</title>
+            <style>
+                body { font-family: 'Inter', sans-serif; padding: 20px; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                th { background-color: #f2f2f2; font-weight: 600; }
+                .highlight { background-color: yellow; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <h2>Search Results</h2>
+            <p>Count: ${results.length}</p>
+            ${tableClone.outerHTML}
+        </body>
+        </html>
+    `;
+    
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "search_results.html";
+    a.click();
+}
+
+function downloadExcel() {
+    const dataForSheet = results.map(row => row.map(cell => cell.text));
+
+    const headerRow = outputCols.map(idx => headers[idx]);
+    if (document.getElementById("createNumbers").checked) {
+        headerRow.push("Extracted Numbers");
+    }
+    
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataForSheet]);
+    XLSX.utils.book_append_sheet(wb, ws, "Results");
+    XLSX.writeFile(wb, "search_results.xlsx");
+}
+</script>
+</body>
+</html>
