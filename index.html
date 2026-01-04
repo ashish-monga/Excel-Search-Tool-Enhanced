@@ -39,9 +39,9 @@
             <div>
                 <h1 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-3">
                     <i class="fa-solid fa-file-excel text-green-600"></i>
-                    Excel Search Tool <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">Ver 9.1 (iOS)</span>
+                    Excel Search Tool <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">Ver 9.2 (iOS)</span>
                 </h1>
-                <p class="text-slate-500 mt-1 text-sm font-medium">Optimized for iPhone & iPad (Zoom Enabled)</p>
+                <p class="text-slate-500 mt-1 text-sm font-medium">Optimized for iPhone & iPad (Zoom + Font Options)</p>
             </div>
              <div id="globalStatus" class="text-xs font-bold text-slate-400 px-3 py-1 bg-slate-100 rounded-full hidden">
                 Ready
@@ -114,6 +114,18 @@
                     </div>
                 </div>
 
+                <!-- Font Size Selector (Added Back) -->
+                <div class="mb-4">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1 block">Result Font Size</label>
+                    <select id="fontSizeSelect" class="w-full rounded-lg border-slate-300 border bg-white px-3 py-2 text-base font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option value="text-sm">Small (14px)</option>
+                        <option value="text-base">Medium (16px)</option>
+                        <option value="text-lg">Large (18px)</option>
+                        <option value="text-[22px]" selected>Extra Large (22px)</option>
+                        <option value="text-[26px]">Huge (26px)</option>
+                    </select>
+                </div>
+
                 <!-- Checkboxes - Larger Text for Readability -->
                 <div class="grid grid-cols-1 gap-y-3 gap-x-2 mb-4">
                     <label class="flex items-center space-x-3 cursor-pointer group bg-slate-50 p-2 rounded hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200">
@@ -182,16 +194,11 @@
                     <p class="text-base text-slate-400 mt-1">Upload and Search</p>
                 </div>
                 
-                <!-- 
-                   UPDATED TABLE STYLING:
-                   - Text fixed at 22px
-                   - Font weight bold
-                   - Leading (line-height) relaxed for readability
-                -->
                 <table id="resultTable" class="min-w-full divide-y divide-slate-300 hidden border-collapse">
                     <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm ring-1 ring-slate-900/5">
                         <tr id="tableHeader"></tr>
                     </thead>
+                    <!-- Default to 22px initially -->
                     <tbody id="tableBody" class="bg-white divide-y divide-slate-200 text-[22px] font-bold text-slate-800 leading-relaxed"></tbody>
                 </table>
             </div>
@@ -230,6 +237,7 @@ const tableHeader = document.getElementById("tableHeader");
 const resultTable = document.getElementById("resultTable");
 const emptyState = document.getElementById("emptyState");
 const globalStatus = document.getElementById("globalStatus");
+const fontSizeSelect = document.getElementById("fontSizeSelect");
 
 // Initialize
 renderKeywordInputs();
@@ -256,6 +264,15 @@ document.addEventListener("click", (e) => {
 });
 
 fileInput.addEventListener("change", handleFileUpload);
+
+fontSizeSelect.addEventListener("change", function() {
+    // Current class list
+    const sizeClasses = ["text-sm", "text-base", "text-lg", "text-[22px]", "text-[26px]"];
+    // Remove all possible size classes
+    tableBody.classList.remove(...sizeClasses);
+    // Add the selected one
+    tableBody.classList.add(this.value);
+});
 
 
 // --- Functions ---
