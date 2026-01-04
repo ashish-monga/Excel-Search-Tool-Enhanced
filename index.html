@@ -56,9 +56,9 @@
             <div>
                 <h1 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-3">
                     <i class="fa-solid fa-file-excel text-green-600"></i>
-                    Excel Search Tool <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">Ver 11.0</span>
+                    Excel Search Tool <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">Ver 12.0</span>
                 </h1>
-                <p class="text-slate-500 mt-1 text-sm font-medium">Multi-File • Sortable • Smart Formatting</p>
+                <p class="text-slate-500 mt-1 text-sm font-medium">Add/Remove Files • Sortable • Smart Formatting</p>
             </div>
              <div id="globalStatus" class="text-xs font-bold text-slate-400 px-3 py-1 bg-slate-100 rounded-full hidden">
                 Ready
@@ -70,16 +70,27 @@
             
             <!-- 1. Upload File -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-lg font-bold">1</span>
-                    <label class="block text-lg font-bold text-slate-900">Upload Files</label>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-lg font-bold">1</span>
+                        <label class="block text-lg font-bold text-slate-900">Manage Files</label>
+                    </div>
+                    <span id="fileCountBadge" class="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full hidden">0 Files</span>
                 </div>
                 
-                <div class="relative group flex-1">
-                    <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple
-                        class="block w-full text-base text-slate-700 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-base file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all h-full font-medium">
+                <div class="relative group mb-3">
+                    <label for="fileInput" class="flex items-center justify-center w-full px-4 py-3 bg-blue-50 text-blue-700 font-bold rounded-lg border-2 border-blue-100 border-dashed cursor-pointer hover:bg-blue-100 hover:border-blue-300 transition-all">
+                        <i class="fa-solid fa-plus mr-2"></i> Add Excel Files
+                    </label>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple class="hidden">
                 </div>
-                <p id="fileStats" class="text-sm text-slate-500 font-medium mt-2 hidden">No file loaded</p>
+
+                <!-- Visual File List (Interactive) -->
+                <div id="fileListContainer" class="flex-1 min-h-[100px] max-h-[200px] overflow-y-auto border border-slate-100 rounded-lg bg-slate-50 p-2 hidden">
+                    <ul id="fileList" class="space-y-2"></ul>
+                </div>
+                
+                <p id="fileStats" class="text-sm text-slate-500 font-medium mt-2 hidden text-center">No file loaded</p>
             </div>
 
             <!-- 2. Search Config -->
@@ -131,7 +142,7 @@
                     </div>
                 </div>
 
-                <!-- Font Size Selector (Updated) -->
+                <!-- Font Size Selector -->
                 <div class="mb-4">
                     <label class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1 block">Result Font Size</label>
                     <select id="fontSizeSelect" class="w-full rounded-lg border-slate-300 border bg-white px-3 py-2 text-base font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
@@ -222,8 +233,10 @@
     </div>
 
 <script>
-let workbookData = [];
-let headers = [];
+// State Management
+let fileCache = []; // Stores objects: { id, name, data (array), headers (array) }
+let combinedData = []; // The merged dataset used for searching
+let combinedHeaders = []; // The active headers
 let results = [];
 let outputCols = [];
 let currentSort = { col: -1, dir: 'asc' };
@@ -241,6 +254,9 @@ const HOSPITAL_INTENT = [
 
 // UI References
 const fileInput = document.getElementById("fileInput");
+const fileListContainer = document.getElementById("fileListContainer");
+const fileList = document.getElementById("fileList");
+const fileCountBadge = document.getElementById("fileCountBadge");
 const searchMode = document.getElementById("searchMode");
 const keywordInputsDiv = document.getElementById("keywordInputs");
 const searchColumnSel = document.getElementById("searchColumn");
@@ -279,7 +295,7 @@ document.addEventListener("click", (e) => {
     }
 });
 
-fileInput.addEventListener("change", handleFileUpload);
+fileInput.addEventListener("change", handleFileAdd);
 
 fontSizeSelect.addEventListener("change", function() {
     const sizeClasses = ["text-sm", "text-[26px]"];
@@ -311,23 +327,18 @@ function renderKeywordInputs() {
     }
 }
 
-async function handleFileUpload(e) {
+// 1. Handle "Add Files" (Appending Logic)
+async function handleFileAdd(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Reset data
-    workbookData = [];
-    headers = [];
-    
-    // UI Update
-    document.getElementById("fileStats").textContent = `Loading ${files.length} file(s)...`;
-    document.getElementById("fileStats").classList.remove("hidden");
+    // Loading State
     globalStatus.textContent = "Reading...";
     globalStatus.classList.remove("hidden");
     searchBtn.disabled = true;
-    searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Reading...';
+    searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Adding...';
 
-    // Helper to read a single file
+    // Read newly added files
     const readFile = (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -337,9 +348,24 @@ async function handleFileUpload(e) {
                     const workbook = XLSX.read(data, { type: "array" });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                    resolve(json);
+                    
+                    // Separate Headers and Data
+                    let fileHeaders = [];
+                    let fileData = [];
+                    if (json.length > 0) {
+                        fileHeaders = json[0].map(h => String(h || "").trim());
+                        fileData = json.slice(1); // Exclude header row from data storage
+                    }
+
+                    resolve({ 
+                        id: Date.now() + Math.random().toString(36), // Unique ID
+                        name: file.name, 
+                        headers: fileHeaders,
+                        data: fileData, 
+                        totalRows: fileData.length
+                    });
                 } catch (err) {
-                    reject(err);
+                    reject({ name: file.name, error: err });
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -347,52 +373,136 @@ async function handleFileUpload(e) {
     };
 
     try {
-        const allDataPromises = Array.from(files).map(f => readFile(f));
-        const allDataArrays = await Promise.all(allDataPromises);
+        const newFilesData = await Promise.all(Array.from(files).map(f => readFile(f)));
+        
+        // Add to global cache
+        fileCache = [...fileCache, ...newFilesData];
+        
+        // Reset Input (allows selecting same file again if needed, or new files)
+        fileInput.value = ""; 
 
-        // Merge logic
-        allDataArrays.forEach((data, index) => {
-            if (data.length > 0) {
-                if (index === 0) {
-                    // First file determines headers
-                    headers = data[0].map(h => String(h || "").trim());
-                    workbookData = data; // Keep headers for first one
-                } else {
-                    // Subsequent files: skip header row (index 0) and append
-                    // Warning: assumes identical column structure
-                    const rowsWithoutHeader = data.slice(1);
-                    workbookData = workbookData.concat(rowsWithoutHeader);
-                }
-            }
-        });
-
-        if (workbookData.length > 1) { // >1 because of header row
-            populateSearchColumns();
-            populateOutputCheckboxes();
-            
-            searchBtn.disabled = false;
-            searchBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Run Search';
-            toggleColumnsBtn.disabled = false;
-            searchColumnSel.disabled = false;
-            
-            resultStatus.textContent = `${workbookData.length - 1} rows loaded.`;
-            globalStatus.textContent = "Ready";
-            globalStatus.classList.add("bg-green-100", "text-green-700");
-            document.getElementById("fileStats").textContent = `Loaded ${files.length} file(s) (${workbookData.length - 1} rows)`;
-        } else {
-            alert("The files appear to be empty.");
-            globalStatus.textContent = "Empty";
-        }
+        // Update Everything
+        recalculateCombinedData();
+        renderFileList();
 
     } catch (error) {
         console.error(error);
-        alert("Error reading files.");
-        searchBtn.innerHTML = '<i class="fa-solid fa-exclamation-circle"></i> Error';
-        globalStatus.textContent = "Error";
+        alert("Error reading some files.");
     }
 }
 
+// 2. Remove File
+function removeFile(id) {
+    fileCache = fileCache.filter(f => f.id !== id);
+    recalculateCombinedData();
+    renderFileList();
+}
+
+// 3. Recalculate Combined Data from Cache
+function recalculateCombinedData() {
+    if (fileCache.length === 0) {
+        combinedData = [];
+        combinedHeaders = [];
+        resetUI();
+        return;
+    }
+
+    // Use headers from the *first* uploaded file as master headers
+    combinedHeaders = fileCache[0].headers;
+    let headerMismatch = false;
+
+    // Concatenate Data
+    // NOTE: This assumes columns align. It checks header names to warn user.
+    combinedData = [];
+    
+    // Add Header Row first (for internal logic consistency if needed, though we process data separately usually)
+    // Actually, processFile expects workbookData[0] to be headers.
+    combinedData.push(combinedHeaders);
+
+    fileCache.forEach(fileObj => {
+        // Validation
+        if (JSON.stringify(fileObj.headers) !== JSON.stringify(combinedHeaders)) {
+            headerMismatch = true;
+        }
+        combinedData = combinedData.concat(fileObj.data);
+    });
+
+    // Update UI based on new combined data
+    workbookData = combinedData; // Sync global used by search
+    headers = combinedHeaders;   // Sync global used by search
+
+    if (workbookData.length > 1) {
+        populateSearchColumns();
+        populateOutputCheckboxes();
+        
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Run Search';
+        toggleColumnsBtn.disabled = false;
+        searchColumnSel.disabled = false;
+        
+        const totalRows = workbookData.length - 1; // minus header
+        resultStatus.textContent = `${totalRows} rows ready.`;
+        
+        if (headerMismatch) {
+            globalStatus.textContent = "Header Mismatch";
+            globalStatus.className = "text-xs font-bold text-yellow-800 px-3 py-1 bg-yellow-100 rounded-full";
+            alert("Warning: Column headers do not match across all files. Results may be inaccurate.\n\nPlease ensure all Excel files have the same structure.");
+        } else {
+            globalStatus.textContent = "Ready";
+            globalStatus.className = "text-xs font-bold text-green-700 px-3 py-1 bg-green-100 rounded-full";
+        }
+    } else {
+        resetUI();
+    }
+}
+
+// 4. Render File List UI
+function renderFileList() {
+    fileList.innerHTML = "";
+    if (fileCache.length === 0) {
+        fileListContainer.classList.add("hidden");
+        fileCountBadge.classList.add("hidden");
+        return;
+    }
+
+    fileListContainer.classList.remove("hidden");
+    fileCountBadge.textContent = `${fileCache.length} Files`;
+    fileCountBadge.classList.remove("hidden");
+
+    fileCache.forEach(f => {
+        const li = document.createElement("li");
+        li.className = "flex justify-between items-center bg-white p-2 rounded border border-slate-200 shadow-sm";
+        li.innerHTML = `
+            <div class="flex items-center overflow-hidden">
+                <i class="fa-regular fa-file-excel text-green-600 mr-2 flex-shrink-0"></i> 
+                <span class="text-sm font-medium truncate text-slate-700" title="${f.name}">${f.name}</span>
+                <span class="ml-2 text-xs text-slate-400">(${f.totalRows} rows)</span>
+            </div>
+            <button onclick="removeFile('${f.id}')" class="text-slate-400 hover:text-red-500 p-1 ml-2 transition-colors" title="Remove file">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        `;
+        fileList.appendChild(li);
+    });
+}
+
+function resetUI() {
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Run Search';
+    toggleColumnsBtn.disabled = true;
+    toggleColumnsBtn.innerHTML = `<span>Select Output Columns</span><i class="fa-solid fa-chevron-down text-sm"></i>`;
+    searchColumnSel.disabled = true;
+    searchColumnSel.innerHTML = "<option>Wait for file...</option>";
+    globalStatus.classList.add("hidden");
+    resultStatus.textContent = "Waiting...";
+}
+
+// --- Standard Search Functions (Unchanged logic, referencing updated globals) ---
+
 function populateSearchColumns() {
+    // Save previous selection if possible
+    const prevSelection = searchColumnSel.value;
+    
     searchColumnSel.innerHTML = "";
     headers.forEach((h, i) => {
         const opt = document.createElement("option");
@@ -405,12 +515,18 @@ function populateSearchColumns() {
             searchColumnSel.value = i;
         }
     });
+    
+    // Restore selection if valid index
+    if(prevSelection && prevSelection < headers.length) {
+        searchColumnSel.value = prevSelection;
+    }
 }
 
 function populateOutputCheckboxes() {
+    // We want to preserve checked state if headers haven't changed drastically
+    // For simplicity, we just re-render. User might have to re-select.
     columnDropdown.innerHTML = "";
     
-    // Select All
     const selectAllDiv = document.createElement("div");
     selectAllDiv.className = "flex items-center p-3 hover:bg-slate-50 rounded-lg cursor-pointer border-b border-slate-100 mb-1";
     selectAllDiv.innerHTML = `
@@ -468,13 +584,11 @@ function extractNumbers(text, dedup) {
     return nums.join(", ");
 }
 
-// FORMATTING HELPER: Sentence case (first char upper, rest lower)
 function toSentenceCase(str) {
     if (!str) return "";
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
-// HELPER: Escape Regex characters
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
 }
@@ -510,6 +624,7 @@ function processFile() {
     results = [];
     const seenRows = new Set();
 
+    // Loop starts at 1 because 0 is headers in workbookData
     for (let i = 1; i < workbookData.length; i++) {
         const row = workbookData[i];
         if (!row) continue;
@@ -533,13 +648,9 @@ function processFile() {
 
         if (keepLine && !isMatch) continue;
 
-        // --- Formatting Logic ---
-        // 1. Convert entire text to Sentence case
         let formattedText = toSentenceCase(String(cellValue || ""));
         
-        // 2. Highlight keywords AND force them to UPPERCASE
         if (isMatch && keys.length > 0) {
-            // Sort keys by length desc to avoid replacing substrings incorrectly
             const sortedKeys = [...keys].sort((a,b) => b.length - a.length);
             const pattern = new RegExp(`(${sortedKeys.map(escapeRegExp).join("|")})`, "gi");
             
@@ -548,7 +659,6 @@ function processFile() {
             });
         }
         
-        // Append numbers to main text
         if (appendContact) {
             const nums = extractNumbers(cellValue, dedupNumbers);
             if (nums) {
@@ -567,9 +677,6 @@ function processFile() {
             if (idx === colIdx) {
                 outRow.push({ html: formattedText, text: toSentenceCase(String(cellValue || "")) });
             } else {
-                // Apply sentence case to other columns too for consistency? Or just raw?
-                // User asked for "output of content be in lower case with first letter in capitol"
-                // Let's apply to all text cells for better look.
                 const val = String(row[idx] || "");
                 const prettyVal = toSentenceCase(val);
                 outRow.push({ html: prettyVal, text: prettyVal });
@@ -587,9 +694,7 @@ function processFile() {
     displayResults(createNumbers);
 }
 
-// Sorting Function
 function sortResults(colIndex) {
-    // If clicking same column, toggle direction. If new, set to ASC
     if (currentSort.col === colIndex) {
         currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -600,8 +705,6 @@ function sortResults(colIndex) {
     const dirMultiplier = currentSort.dir === 'asc' ? 1 : -1;
 
     results.sort((rowA, rowB) => {
-        // rowA and rowB are arrays of {html, text}. colIndex corresponds to the index in that array.
-        // We compare the .text property
         const textA = (rowA[colIndex]?.text || "").toLowerCase();
         const textB = (rowB[colIndex]?.text || "").toLowerCase();
         
@@ -614,15 +717,8 @@ function sortResults(colIndex) {
 }
 
 function displayResults(hasNumbers) {
-    // 1. Setup Header with Sort Capability
     let headerHTML = "";
-    
-    // We need to know how many columns are actually displayed to map the sort click index correctly
-    // The 'results' array maps 1:1 with outputCols + Optional Phone Col
-    
-    // Output Columns
     outputCols.forEach((idx, loopIndex) => {
-        // Calculate class for sort styling
         let sortClass = "sortable";
         if (currentSort.col === loopIndex) {
             sortClass += currentSort.dir === 'asc' ? " asc" : " desc";
@@ -633,9 +729,8 @@ function displayResults(hasNumbers) {
         </th>`;
     });
 
-    // Extra Phone Column
     if (hasNumbers) {
-        const phoneColIndex = outputCols.length; // It's the last index
+        const phoneColIndex = outputCols.length;
         let sortClass = "sortable";
         if (currentSort.col === phoneColIndex) {
             sortClass += currentSort.dir === 'asc' ? " asc" : " desc";
@@ -647,7 +742,6 @@ function displayResults(hasNumbers) {
     
     tableHeader.innerHTML = headerHTML;
 
-    // 2. Setup Body
     if (results.length === 0) {
         resultTable.classList.add("hidden");
         emptyState.classList.remove("hidden");
@@ -674,7 +768,6 @@ function downloadHTML() {
     const tableClone = resultTable.cloneNode(true);
     tableClone.classList.remove("hidden");
     
-    // remove sort listeners/icons from export if desired, or keep them (they won't work in static html without js)
     const htmlContent = `
         <!DOCTYPE html>
         <html>
