@@ -108,7 +108,7 @@
                 <div>
                     <h1 class="text-xl font-bold text-slate-800 leading-tight">Excel Search Tool</h1>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 15.0</span>
+                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 16.0</span>
                         <span class="text-xs text-slate-400">Snippet View • Multi-File • Modern</span>
                     </div>
                 </div>
@@ -228,7 +228,7 @@
                         <!-- Toggles: ALL CHECKED BY DEFAULT (as per original logic, only columns unchecked) -->
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                             <input type="checkbox" id="keepLine" checked class="custom-checkbox rounded text-blue-600 mr-3">
-                            <span class="text-sm font-medium text-slate-600">Match Only (Snippet)</span>
+                            <span class="text-sm font-medium text-slate-600">Snippet View</span>
                         </label>
                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                             <input type="checkbox" id="dropDuplicates" checked class="custom-checkbox rounded text-blue-600 mr-3">
@@ -727,7 +727,7 @@ function processFile() {
     const colIdx = parseInt(searchColumnSel.value);
     const mode = searchMode.value;
     
-    const keepLine = document.getElementById("keepLine").checked;
+    const keepLine = document.getElementById("keepLine").checked; // Rename to snippetView? Keeping ID for now.
     const appendContact = document.getElementById("appendContact").checked;
     const createNumbers = document.getElementById("createNumbers").checked;
     const dropDuplicates = document.getElementById("dropDuplicates").checked;
@@ -776,13 +776,16 @@ function processFile() {
             }
         }
 
-        if (keepLine && !isMatch) continue;
+        // Logic Change: ALWAYS FILTER non-matching rows
+        if (!isMatch) continue;
 
         // --- SNIPPET LOGIC START ---
         let formattedText = "";
         
-        // Step 1: Generate Base Text (Full vs Snippet)
-        if (keepLine && isMatch) {
+        // Step 1: Generate Base Text (Snippet vs Full)
+        // If "Snippet View" (keepLine) is checked, show snippet.
+        // If Unchecked, show full text.
+        if (keepLine) {
             // Generate Context Snippet
             formattedText = generateSnippet(String(cellValue || ""), keys);
         } else {
@@ -791,7 +794,7 @@ function processFile() {
         }
         
         // Step 2: Highlight Keywords in the result text (Snippet or Full)
-        if (isMatch && keys.length > 0) {
+        if (keys.length > 0) {
             const sortedKeys = [...keys].sort((a,b) => b.length - a.length);
             const pattern = new RegExp(`(${sortedKeys.map(escapeRegExp).join("|")})`, "gi");
             
@@ -836,29 +839,11 @@ function processFile() {
     displayResults(createNumbers);
 }
 
-function sortResults(colIndex) {
-    if (currentSort.col === colIndex) {
-        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSort.col = colIndex;
-        currentSort.dir = 'asc';
-    }
-
-    const dirMultiplier = currentSort.dir === 'asc' ? 1 : -1;
-
-    results.sort((rowA, rowB) => {
-        const textA = (rowA[colIndex]?.text || "").toLowerCase();
-        const textB = (rowB[colIndex]?.text || "").toLowerCase();
-        
-        if (textA < textB) return -1 * dirMultiplier;
-        if (textA > textB) return 1 * dirMultiplier;
-        return 0;
-    });
-
-    displayResults(document.getElementById("createNumbers").checked);
-}
-
 function displayResults(hasNumbers) {
+    // Limit rendering to first 500 rows to avoid hanging
+    const RENDER_LIMIT = 500;
+    const rowsToRender = results.slice(0, RENDER_LIMIT);
+
     let headerHTML = "";
     outputCols.forEach((idx, loopIndex) => {
         let sortClass = "sortable hover:bg-slate-100 cursor-pointer transition-colors";
@@ -911,8 +896,8 @@ function displayResults(hasNumbers) {
     emptyState.classList.add("hidden");
     resultTable.classList.remove("hidden");
     
-    const rowsHTML = results.map((row, i) => {
-        // Zebra Striping + Hover effect
+    // Render only the limited subset of rows
+    const rowsHTML = rowsToRender.map((row, i) => {
         const bgClass = i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
         return `<tr class="${bgClass} hover:bg-blue-50/50 transition-colors">` + 
                row.map(cell => `<td class="px-6 py-5 whitespace-normal min-w-[200px] border-b border-slate-100">${cell.html}</td>`).join("") + 
@@ -920,8 +905,38 @@ function displayResults(hasNumbers) {
     }).join("");
 
     tableBody.innerHTML = rowsHTML;
-    resultStatus.textContent = `${results.length} found`;
+
+    // Show status including if rows are hidden
+    if (results.length > RENDER_LIMIT) {
+        resultStatus.textContent = `Showing ${RENDER_LIMIT} of ${results.length} matches (Download Excel for all)`;
+    } else {
+        resultStatus.textContent = `${results.length} found`;
+    }
+    
     downloadButtons.classList.remove("hidden");
+}
+
+function sortResults(colIndex) {
+    if (currentSort.col === colIndex) {
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.col = colIndex;
+        currentSort.dir = 'asc';
+    }
+
+    const dirMultiplier = currentSort.dir === 'asc' ? 1 : -1;
+
+    results.sort((rowA, rowB) => {
+        const textA = (rowA[colIndex]?.text || "").toLowerCase();
+        const textB = (rowB[colIndex]?.text || "").toLowerCase();
+        
+        if (textA < textB) return -1 * dirMultiplier;
+        if (textA > textB) return 1 * dirMultiplier;
+        return 0;
+    });
+
+    // Re-call displayResults to respect the render limit with sorted data
+    displayResults(document.getElementById("createNumbers").checked);
 }
 
 function downloadHTML() {
