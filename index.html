@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Explicitly allow user scaling (pinch to zoom) -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <!-- Explicitly allow user scaling (pinch to zoom) with generous limits -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
     <title>Excel Search Tool - Enhanced</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -39,9 +39,9 @@
             <div>
                 <h1 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-3">
                     <i class="fa-solid fa-file-excel text-green-600"></i>
-                    Excel Search Tool <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">Ver 9.0 (iOS)</span>
+                    Excel Search Tool <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">Ver 9.1 (iOS)</span>
                 </h1>
-                <p class="text-slate-500 mt-1 text-sm font-medium">Optimized for iPhone & iPad</p>
+                <p class="text-slate-500 mt-1 text-sm font-medium">Optimized for iPhone & iPad (Zoom Enabled)</p>
             </div>
              <div id="globalStatus" class="text-xs font-bold text-slate-400 px-3 py-1 bg-slate-100 rounded-full hidden">
                 Ready
@@ -172,7 +172,8 @@
             </div>
 
             <!-- Result Table Container -->
-            <div class="flex-1 overflow-auto p-0 relative w-full touch-pan-x touch-pan-y">
+            <!-- Removed touch-pan classes to fix Zoom -->
+            <div class="flex-1 overflow-auto p-0 relative w-full">
                 <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-white">
                     <div class="bg-slate-50 p-8 rounded-full mb-4">
                         <i class="fa-solid fa-table-cells text-5xl text-slate-300"></i>
