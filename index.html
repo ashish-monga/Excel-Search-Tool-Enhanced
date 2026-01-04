@@ -2,246 +2,308 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Explicitly allow user scaling (pinch to zoom) with generous limits -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
-    <title>Excel Search Tool - Enhanced</title>
+    <title>Excel Search Tool - Modern</title>
+    
+    <!-- Scripts & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        /* Use System Fonts for native readability */
+        /* Modern Font Stack */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc; /* Very light slate background */
             -webkit-font-smoothing: antialiased;
         }
+
+        /* Glassmorphism Header */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        /* Card Styles */
+        .control-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .control-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+
+        /* Input Fields */
+        .modern-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+
+        /* Highlight Logic */
         .highlight {
-            background-color: #fef08a; /* yellow-200 */
-            color: #000;
-            padding: 2px 4px;
-            border-radius: 4px;
-            border: 2px solid #eab308;
+            background-color: #fef9c3; /* yellow-100 */
+            color: #0f172a; /* slate-900 */
+            padding: 2px 6px;
+            border-radius: 6px;
+            border-bottom: 3px solid #facc15; /* yellow-400 */
+            font-weight: 800;
             display: inline-block;
-            font-weight: 900;
         }
-        .custom-checkbox {
-            accent-color: #2563eb;
-            width: 24px; 
-            height: 24px;
-            cursor: pointer;
-        }
-        /* Sortable Header Styles */
+
+        /* Sortable Columns */
         th.sortable {
             cursor: pointer;
-            user-select: none;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
         }
         th.sortable:hover {
-            background-color: #e2e8f0;
+            background-color: #f1f5f9; /* slate-100 */
+            color: #1e293b; /* slate-800 */
         }
-        th.sortable .sort-icon {
-            font-size: 0.8em;
-            margin-left: 6px;
-            color: #94a3b8;
+        
+        /* Custom Checkbox */
+        .custom-checkbox {
+            width: 22px;
+            height: 22px;
+            accent-color: #3b82f6; /* blue-500 */
+            cursor: pointer;
+            border-radius: 6px;
         }
-        th.sortable.asc .sort-icon::after { content: '\f0de'; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #2563eb; }
-        th.sortable.desc .sort-icon::after { content: '\f0dd'; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #2563eb; }
-        th.sortable .sort-icon::after { content: '\f0dc'; font-family: "Font Awesome 6 Free"; font-weight: 900; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-900">
+<body class="text-slate-800">
 
-    <div class="max-w-[1800px] mx-auto p-3 md:p-6">
-        <!-- Header -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex justify-between items-center">
-            <div>
-                <h1 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-3">
-                    <i class="fa-solid fa-file-excel text-green-600"></i>
-                    Excel Search Tool <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">Ver 12.0</span>
-                </h1>
-                <p class="text-slate-500 mt-1 text-sm font-medium">Add/Remove Files • Sortable • Smart Formatting</p>
+    <!-- Header Section -->
+    <header class="glass-header sticky top-0 z-30 px-6 py-4 mb-6">
+        <div class="max-w-[1800px] mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-green-600 shadow-sm">
+                    <i class="fa-solid fa-file-excel text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800 leading-tight">Excel Search Tool</h1>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200">Ver 13.0</span>
+                        <span class="text-xs text-slate-400">Multi-File • Sortable • Modern</span>
+                    </div>
+                </div>
             </div>
-             <div id="globalStatus" class="text-xs font-bold text-slate-400 px-3 py-1 bg-slate-100 rounded-full hidden">
+            
+            <div id="globalStatus" class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-100 animate-pulse">
+                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
                 Ready
             </div>
         </div>
+    </header>
 
-        <!-- Control Panel -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="max-w-[1800px] mx-auto px-4 pb-10">
+        
+        <!-- Control Panel Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             
-            <!-- 1. Upload File -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-lg font-bold">1</span>
-                        <label class="block text-lg font-bold text-slate-900">Manage Files</label>
-                    </div>
-                    <span id="fileCountBadge" class="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full hidden">0 Files</span>
-                </div>
-                
-                <div class="relative group mb-3">
-                    <label for="fileInput" class="flex items-center justify-center w-full px-4 py-3 bg-blue-50 text-blue-700 font-bold rounded-lg border-2 border-blue-100 border-dashed cursor-pointer hover:bg-blue-100 hover:border-blue-300 transition-all">
-                        <i class="fa-solid fa-plus mr-2"></i> Add Excel Files
-                    </label>
-                    <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple class="hidden">
+            <!-- CARD 1: Upload -->
+            <div class="control-card p-5 flex flex-col h-full">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">1</span>
+                        Files
+                    </h2>
+                    <span id="fileCountBadge" class="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full hidden">0</span>
                 </div>
 
-                <!-- Visual File List (Interactive) -->
-                <div id="fileListContainer" class="flex-1 min-h-[100px] max-h-[200px] overflow-y-auto border border-slate-100 rounded-lg bg-slate-50 p-2 hidden">
-                    <ul id="fileList" class="space-y-2"></ul>
-                </div>
-                
-                <p id="fileStats" class="text-sm text-slate-500 font-medium mt-2 hidden text-center">No file loaded</p>
-            </div>
-
-            <!-- 2. Search Config -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-lg font-bold">2</span>
-                    <label class="block text-lg font-bold text-slate-900">Search Config</label>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1 block">Column</label>
-                        <select id="searchColumn" class="w-full rounded-lg border-slate-300 border bg-white px-3 py-3 text-base font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400" disabled>
-                            <option>Wait for file...</option>
-                        </select>
+                <div class="flex-1 flex flex-col">
+                    <div class="relative group">
+                        <label for="fileInput" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50/50 hover:bg-blue-50 hover:border-blue-300 transition-all group-hover:scale-[1.01]">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 group-hover:text-blue-500 mb-2 transition-colors"></i>
+                                <p class="mb-1 text-sm font-medium text-slate-600">Click to upload files</p>
+                                <p class="text-xs text-slate-400">XLSX, XLS, XLSM</p>
+                            </div>
+                            <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple class="hidden" />
+                        </label>
                     </div>
 
-                    <div>
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1 block">Mode</label>
-                        <select id="searchMode" class="w-full rounded-lg border-slate-300 border bg-white px-3 py-3 text-base font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                            <option value="1">1 Keyword</option>
-                            <option value="2">2 Keywords (AND)</option>
-                            <option value="3">3 Keywords (AND)</option>
-                            <option value="4">Exact Phrase</option>
-                            <option value="hospital">Hospital (Intent)</option>
-                        </select>
+                    <!-- File List -->
+                    <div id="fileListContainer" class="mt-4 flex-1 hidden">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Uploaded</p>
+                        <ul id="fileList" class="space-y-2 max-h-[140px] overflow-y-auto pr-1"></ul>
                     </div>
-                </div>
-
-                <div id="keywordInputs" class="space-y-3 overflow-y-auto max-h-[160px] pr-1">
-                    <!-- Dynamic inputs go here -->
                 </div>
             </div>
 
-            <!-- 3. Output Settings -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-lg font-bold">3</span>
-                    <label class="block text-lg font-bold text-slate-900">Output</label>
+            <!-- CARD 2: Search Config -->
+            <div class="control-card p-5 flex flex-col h-full">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">2</span>
+                        Configuration
+                    </h2>
                 </div>
-                
-                <div class="mb-4">
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Target Column</label>
+                            <select id="searchColumn" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-medium disabled:opacity-50" disabled>
+                                <option>Upload file first...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Search Mode</label>
+                            <select id="searchMode" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-medium">
+                                <option value="1">1 Keyword</option>
+                                <option value="2">2 Keywords (AND)</option>
+                                <option value="3">3 Keywords (AND)</option>
+                                <option value="4">Exact Phrase</option>
+                                <option value="hospital">Hospital (Intent)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Keywords</label>
+                        <div id="keywordInputs" class="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                            <!-- Dynamic inputs -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 3: Output -->
+            <div class="control-card p-5 flex flex-col h-full">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">3</span>
+                        Output & Actions
+                    </h2>
+                </div>
+
+                <div class="space-y-4 flex-1">
+                    <!-- Column Selector -->
                     <div class="relative">
-                        <button id="toggleColumnsBtn" class="w-full text-left bg-slate-50 border border-slate-300 text-slate-900 text-base font-bold rounded-lg px-3 py-3 flex justify-between items-center hover:bg-slate-100 transition-colors" disabled>
+                        <button id="toggleColumnsBtn" class="w-full flex justify-between items-center bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg p-2.5 hover:bg-slate-100 transition-colors" disabled>
                             <span>Select Output Columns</span>
-                            <i class="fa-solid fa-chevron-down text-sm"></i>
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
                         </button>
-                        <div id="columnDropdown" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto p-2 space-y-1"></div>
+                        <div id="columnDropdown" class="hidden absolute z-50 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto p-2 space-y-1"></div>
                     </div>
-                </div>
 
-                <!-- Font Size Selector -->
-                <div class="mb-4">
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1 block">Result Font Size</label>
-                    <select id="fontSizeSelect" class="w-full rounded-lg border-slate-300 border bg-white px-3 py-2 text-base font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                        <option value="text-sm">Small</option>
-                        <option value="text-[26px]" selected>Large</option>
-                    </select>
-                </div>
+                    <!-- Options Grid -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Font Size -->
+                        <div class="col-span-2">
+                             <select id="fontSizeSelect" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-blue-500 p-2 font-medium">
+                                <option value="text-sm">Font: Small</option>
+                                <option value="text-[26px]" selected>Font: Large (26px)</option>
+                            </select>
+                        </div>
 
-                <!-- Checkboxes -->
-                <div class="grid grid-cols-1 gap-y-3 gap-x-2 mb-4">
-                    <label class="flex items-center space-x-3 cursor-pointer group bg-slate-50 p-2 rounded hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200">
-                        <input type="checkbox" id="keepLine" checked class="custom-checkbox">
-                        <span class="text-base font-semibold text-slate-700 group-hover:text-slate-900">Keep only matching line</span>
-                    </label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="flex items-center space-x-3 cursor-pointer group bg-slate-50 p-2 rounded border border-transparent">
-                            <input type="checkbox" id="appendContact" class="custom-checkbox">
-                            <span class="text-sm font-semibold text-slate-700">Append Phone</span>
+                        <!-- Toggles -->
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+                            <input type="checkbox" id="keepLine" checked class="custom-checkbox rounded text-blue-600 mr-3">
+                            <span class="text-sm font-medium text-slate-600">Match Only</span>
                         </label>
-                        <label class="flex items-center space-x-3 cursor-pointer group bg-slate-50 p-2 rounded border border-transparent">
-                            <input type="checkbox" id="createNumbers" checked class="custom-checkbox">
-                            <span class="text-sm font-semibold text-slate-700">New Phone Col</span>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+                            <input type="checkbox" id="dropDuplicates" checked class="custom-checkbox rounded text-blue-600 mr-3">
+                            <span class="text-sm font-medium text-slate-600">Unique Rows</span>
                         </label>
-                    </div>
-                     <div class="grid grid-cols-2 gap-2">
-                        <label class="flex items-center space-x-3 cursor-pointer group bg-slate-50 p-2 rounded border border-transparent">
-                            <input type="checkbox" id="dropDuplicates" checked class="custom-checkbox">
-                            <span class="text-sm font-semibold text-slate-700">Drop Dup Rows</span>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+                            <input type="checkbox" id="appendContact" class="custom-checkbox rounded text-blue-600 mr-3">
+                            <span class="text-sm font-medium text-slate-600">Add Phone</span>
                         </label>
-                        <label class="flex items-center space-x-3 cursor-pointer group bg-slate-50 p-2 rounded border border-transparent">
-                            <input type="checkbox" id="dedupNumbers" checked class="custom-checkbox">
-                            <span class="text-sm font-semibold text-slate-700">De-dup Phones</span>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+                            <input type="checkbox" id="createNumbers" checked class="custom-checkbox rounded text-blue-600 mr-3">
+                            <span class="text-sm font-medium text-slate-600">Phone Col</span>
+                        </label>
+                         <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer col-span-2">
+                            <input type="checkbox" id="dedupNumbers" checked class="custom-checkbox rounded text-blue-600 mr-3">
+                            <span class="text-sm font-medium text-slate-600">Unique Phones per Cell</span>
                         </label>
                     </div>
                 </div>
 
                 <button onclick="processFile()" id="searchBtn" disabled
-                    class="mt-auto w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg">
+                    class="mt-6 w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none text-base transform active:scale-[0.98]">
                     <i class="fa-solid fa-magnifying-glass"></i> Run Search
                 </button>
             </div>
-
         </div>
 
-        <!-- Results Area -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-[600px]">
-            
-            <!-- Result Toolbar -->
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-20">
+        <!-- Results Section -->
+        <div class="control-card overflow-hidden flex flex-col h-[700px]">
+            <!-- Toolbar -->
+            <div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center sticky top-0 z-20">
                 <div class="flex items-center gap-4">
                     <h2 class="text-lg font-bold text-slate-800">Results</h2>
-                    <span id="resultStatus" class="text-sm font-bold text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-md">
-                        Waiting...
-                    </span>
-                    <span id="sortStatus" class="text-xs text-slate-400 hidden md:inline-block italic">
-                        Click headers to sort
+                    <span id="resultStatus" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                        Waiting for search...
                     </span>
                 </div>
                 <div id="downloadButtons" class="hidden flex gap-2">
-                    <button onclick="downloadHTML()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-base font-bold py-2 px-4 rounded-lg shadow-sm transition-colors">
-                        HTML
+                    <button onclick="downloadHTML()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2">
+                        <i class="fa-brands fa-html5 text-orange-500"></i> HTML
                     </button>
-                    <button onclick="downloadExcel()" class="bg-green-600 hover:bg-green-700 text-white text-base font-bold py-2 px-4 rounded-lg shadow-sm transition-colors">
-                        Excel
+                    <button onclick="downloadExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow-md shadow-green-500/20 transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i> Excel
                     </button>
                 </div>
             </div>
 
-            <!-- Result Table Container -->
-            <div class="flex-1 overflow-auto p-0 relative w-full">
-                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-white">
-                    <div class="bg-slate-50 p-8 rounded-full mb-4">
-                        <i class="fa-solid fa-table-cells text-5xl text-slate-300"></i>
-                    </div>
-                    <p class="text-lg font-bold text-slate-500">Data will appear here</p>
-                    <p class="text-base text-slate-400 mt-1">Upload and Search</p>
+            <!-- Table Container -->
+            <div class="flex-1 overflow-auto relative w-full bg-slate-50/30">
+                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-magnifying-glass-chart text-6xl mb-4"></i>
+                    <p class="text-lg font-medium text-slate-400">Results will appear here</p>
                 </div>
                 
-                <table id="resultTable" class="min-w-full divide-y divide-slate-300 hidden border-collapse">
-                    <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm ring-1 ring-slate-900/5">
+                <table id="resultTable" class="min-w-full divide-y divide-slate-200 hidden border-collapse text-left">
+                    <thead class="bg-slate-50/90 backdrop-blur sticky top-0 z-10 shadow-sm">
                         <tr id="tableHeader"></tr>
                     </thead>
-                    <!-- Default to 26px (Large) initially -->
-                    <tbody id="tableBody" class="bg-white divide-y divide-slate-200 text-[26px] font-bold text-slate-800 leading-relaxed"></tbody>
+                    <tbody id="tableBody" class="bg-white divide-y divide-slate-100 text-[26px] font-bold text-slate-800 leading-relaxed"></tbody>
                 </table>
             </div>
         </div>
+
     </div>
 
 <script>
-// State Management
-let fileCache = []; // Stores objects: { id, name, data (array), headers (array) }
-let combinedData = []; // The merged dataset used for searching
-let combinedHeaders = []; // The active headers
+// --- LOGIC SECTION (Preserved from V11/12) ---
+
+let workbookData = [];
+let headers = [];
+let fileCache = [];
+let combinedData = [];
+let combinedHeaders = [];
 let results = [];
 let outputCols = [];
 let currentSort = { col: -1, dir: 'asc' };
 
-// Hospital Intent Keywords
 const HOSPITAL_INTENT = [
     "running hospital","operational hospital","functional hospital","existing hospital",
     "hospital with beds","hospital beds","bed hospital","speciality hospital",
@@ -252,7 +314,7 @@ const HOSPITAL_INTENT = [
     "nursing home", "clinic space", "medical center"
 ];
 
-// UI References
+// References
 const fileInput = document.getElementById("fileInput");
 const fileListContainer = document.getElementById("fileListContainer");
 const fileList = document.getElementById("fileList");
@@ -272,10 +334,10 @@ const emptyState = document.getElementById("emptyState");
 const globalStatus = document.getElementById("globalStatus");
 const fontSizeSelect = document.getElementById("fontSizeSelect");
 
-// Initialize
+// Init
 renderKeywordInputs();
 
-// --- Event Listeners ---
+// Listeners
 searchMode.addEventListener("change", renderKeywordInputs);
 
 toggleColumnsBtn.addEventListener("click", (e) => {
@@ -303,8 +365,7 @@ fontSizeSelect.addEventListener("change", function() {
     tableBody.classList.add(this.value);
 });
 
-
-// --- Functions ---
+// Functions
 
 function renderKeywordInputs() {
     keywordInputsDiv.innerHTML = "";
@@ -312,8 +373,8 @@ function renderKeywordInputs() {
     
     if (mode === "hospital") {
         const info = document.createElement("div");
-        info.className = "text-base font-medium text-blue-700 bg-blue-50 p-3 rounded-lg border border-blue-200 flex items-start gap-2";
-        info.innerHTML = `<i class="fa-solid fa-info-circle mt-1"></i> <span>Searching for ${HOSPITAL_INTENT.length} hospital terms.</span>`;
+        info.className = "text-sm font-medium text-blue-700 bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex items-start gap-2";
+        info.innerHTML = `<i class="fa-solid fa-circle-info mt-0.5"></i> <span>Searching for ${HOSPITAL_INTENT.length} hospital terms.</span>`;
         keywordInputsDiv.appendChild(info);
         return;
     }
@@ -321,24 +382,21 @@ function renderKeywordInputs() {
     const count = (mode === "4") ? 1 : parseInt(mode);
     for (let i = 1; i <= count; i++) {
         const inp = document.createElement("input");
-        inp.className = "keyword-input block w-full rounded-lg border-slate-300 border bg-white px-3 py-3 text-lg font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-slate-400";
+        inp.className = "w-full bg-slate-50 border border-slate-200 text-slate-800 text-base rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-2.5 font-medium placeholder-slate-400 transition-all";
         inp.placeholder = (mode === "4") ? "Exact phrase..." : `Keyword ${i}...`;
         keywordInputsDiv.appendChild(inp);
     }
 }
 
-// 1. Handle "Add Files" (Appending Logic)
 async function handleFileAdd(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Loading State
-    globalStatus.textContent = "Reading...";
+    globalStatus.innerHTML = '<span class="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></span> Reading...';
     globalStatus.classList.remove("hidden");
     searchBtn.disabled = true;
-    searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Adding...';
+    searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Reading Files...';
 
-    // Read newly added files
     const readFile = (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -349,16 +407,15 @@ async function handleFileAdd(e) {
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                     
-                    // Separate Headers and Data
                     let fileHeaders = [];
                     let fileData = [];
                     if (json.length > 0) {
                         fileHeaders = json[0].map(h => String(h || "").trim());
-                        fileData = json.slice(1); // Exclude header row from data storage
+                        fileData = json.slice(1);
                     }
 
                     resolve({ 
-                        id: Date.now() + Math.random().toString(36), // Unique ID
+                        id: Date.now() + Math.random().toString(36),
                         name: file.name, 
                         headers: fileHeaders,
                         data: fileData, 
@@ -374,31 +431,22 @@ async function handleFileAdd(e) {
 
     try {
         const newFilesData = await Promise.all(Array.from(files).map(f => readFile(f)));
-        
-        // Add to global cache
         fileCache = [...fileCache, ...newFilesData];
-        
-        // Reset Input (allows selecting same file again if needed, or new files)
         fileInput.value = ""; 
-
-        // Update Everything
         recalculateCombinedData();
         renderFileList();
-
     } catch (error) {
         console.error(error);
-        alert("Error reading some files.");
+        alert("Error reading files.");
     }
 }
 
-// 2. Remove File
 function removeFile(id) {
     fileCache = fileCache.filter(f => f.id !== id);
     recalculateCombinedData();
     renderFileList();
 }
 
-// 3. Recalculate Combined Data from Cache
 function recalculateCombinedData() {
     if (fileCache.length === 0) {
         combinedData = [];
@@ -407,29 +455,20 @@ function recalculateCombinedData() {
         return;
     }
 
-    // Use headers from the *first* uploaded file as master headers
     combinedHeaders = fileCache[0].headers;
     let headerMismatch = false;
-
-    // Concatenate Data
-    // NOTE: This assumes columns align. It checks header names to warn user.
     combinedData = [];
-    
-    // Add Header Row first (for internal logic consistency if needed, though we process data separately usually)
-    // Actually, processFile expects workbookData[0] to be headers.
     combinedData.push(combinedHeaders);
 
     fileCache.forEach(fileObj => {
-        // Validation
         if (JSON.stringify(fileObj.headers) !== JSON.stringify(combinedHeaders)) {
             headerMismatch = true;
         }
         combinedData = combinedData.concat(fileObj.data);
     });
 
-    // Update UI based on new combined data
-    workbookData = combinedData; // Sync global used by search
-    headers = combinedHeaders;   // Sync global used by search
+    workbookData = combinedData;
+    headers = combinedHeaders;
 
     if (workbookData.length > 1) {
         populateSearchColumns();
@@ -440,23 +479,21 @@ function recalculateCombinedData() {
         toggleColumnsBtn.disabled = false;
         searchColumnSel.disabled = false;
         
-        const totalRows = workbookData.length - 1; // minus header
+        const totalRows = workbookData.length - 1;
         resultStatus.textContent = `${totalRows} rows ready.`;
         
         if (headerMismatch) {
-            globalStatus.textContent = "Header Mismatch";
-            globalStatus.className = "text-xs font-bold text-yellow-800 px-3 py-1 bg-yellow-100 rounded-full";
-            alert("Warning: Column headers do not match across all files. Results may be inaccurate.\n\nPlease ensure all Excel files have the same structure.");
+            globalStatus.innerHTML = '<span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Mismatch Warning';
+            globalStatus.className = "flex items-center gap-2 px-3 py-1.5 bg-yellow-50 text-yellow-700 text-xs font-bold rounded-full border border-yellow-200";
         } else {
-            globalStatus.textContent = "Ready";
-            globalStatus.className = "text-xs font-bold text-green-700 px-3 py-1 bg-green-100 rounded-full";
+            globalStatus.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span> Ready';
+            globalStatus.className = "flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-100";
         }
     } else {
         resetUI();
     }
 }
 
-// 4. Render File List UI
 function renderFileList() {
     fileList.innerHTML = "";
     if (fileCache.length === 0) {
@@ -466,19 +503,23 @@ function renderFileList() {
     }
 
     fileListContainer.classList.remove("hidden");
-    fileCountBadge.textContent = `${fileCache.length} Files`;
+    fileCountBadge.textContent = `${fileCache.length}`;
     fileCountBadge.classList.remove("hidden");
 
     fileCache.forEach(f => {
         const li = document.createElement("li");
-        li.className = "flex justify-between items-center bg-white p-2 rounded border border-slate-200 shadow-sm";
+        li.className = "flex justify-between items-center bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm group hover:border-blue-100 transition-colors";
         li.innerHTML = `
             <div class="flex items-center overflow-hidden">
-                <i class="fa-regular fa-file-excel text-green-600 mr-2 flex-shrink-0"></i> 
-                <span class="text-sm font-medium truncate text-slate-700" title="${f.name}">${f.name}</span>
-                <span class="ml-2 text-xs text-slate-400">(${f.totalRows} rows)</span>
+                <div class="w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600 mr-3">
+                    <i class="fa-regular fa-file-excel"></i>
+                </div>
+                <div class="flex flex-col min-w-0">
+                    <span class="text-sm font-semibold truncate text-slate-700" title="${f.name}">${f.name}</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">${f.totalRows} rows</span>
+                </div>
             </div>
-            <button onclick="removeFile('${f.id}')" class="text-slate-400 hover:text-red-500 p-1 ml-2 transition-colors" title="Remove file">
+            <button onclick="removeFile('${f.id}')" class="text-slate-300 hover:text-red-500 p-2 transition-colors rounded-full hover:bg-red-50" title="Remove file">
                 <i class="fa-solid fa-trash-can"></i>
             </button>
         `;
@@ -490,19 +531,16 @@ function resetUI() {
     searchBtn.disabled = true;
     searchBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Run Search';
     toggleColumnsBtn.disabled = true;
-    toggleColumnsBtn.innerHTML = `<span>Select Output Columns</span><i class="fa-solid fa-chevron-down text-sm"></i>`;
+    toggleColumnsBtn.innerHTML = `<span>Select Output Columns</span><i class="fa-solid fa-chevron-down text-xs"></i>`;
     searchColumnSel.disabled = true;
     searchColumnSel.innerHTML = "<option>Wait for file...</option>";
-    globalStatus.classList.add("hidden");
     resultStatus.textContent = "Waiting...";
+    fileListContainer.classList.add("hidden");
+    fileCountBadge.classList.add("hidden");
 }
 
-// --- Standard Search Functions (Unchanged logic, referencing updated globals) ---
-
 function populateSearchColumns() {
-    // Save previous selection if possible
     const prevSelection = searchColumnSel.value;
-    
     searchColumnSel.innerHTML = "";
     headers.forEach((h, i) => {
         const opt = document.createElement("option");
@@ -515,32 +553,28 @@ function populateSearchColumns() {
             searchColumnSel.value = i;
         }
     });
-    
-    // Restore selection if valid index
     if(prevSelection && prevSelection < headers.length) {
         searchColumnSel.value = prevSelection;
     }
 }
 
 function populateOutputCheckboxes() {
-    // We want to preserve checked state if headers haven't changed drastically
-    // For simplicity, we just re-render. User might have to re-select.
     columnDropdown.innerHTML = "";
     
     const selectAllDiv = document.createElement("div");
     selectAllDiv.className = "flex items-center p-3 hover:bg-slate-50 rounded-lg cursor-pointer border-b border-slate-100 mb-1";
     selectAllDiv.innerHTML = `
-        <input type="checkbox" id="selectAllCols" class="rounded text-blue-600 focus:ring-blue-500 border-slate-300 mr-4 w-6 h-6" checked>
-        <label for="selectAllCols" class="text-base font-bold text-slate-800 cursor-pointer uppercase">Select All</label>
+        <input type="checkbox" id="selectAllCols" class="custom-checkbox rounded text-blue-600 mr-3" checked>
+        <label for="selectAllCols" class="text-sm font-bold text-slate-700 cursor-pointer uppercase">Select All</label>
     `;
     columnDropdown.appendChild(selectAllDiv);
 
     headers.forEach((h, i) => {
         const div = document.createElement("div");
-        div.className = "flex items-center p-3 hover:bg-slate-50 rounded-lg cursor-pointer";
+        div.className = "flex items-center p-2.5 hover:bg-slate-50 rounded-lg cursor-pointer";
         div.innerHTML = `
-            <input type="checkbox" value="${i}" class="col-checkbox rounded text-blue-600 focus:ring-blue-500 border-slate-300 mr-4 w-6 h-6" checked>
-            <label class="text-base font-medium text-slate-700 cursor-pointer truncate select-none">${h || `Column ${i+1}`}</label>
+            <input type="checkbox" value="${i}" class="col-checkbox custom-checkbox rounded text-blue-600 mr-3" checked>
+            <label class="text-sm font-medium text-slate-600 cursor-pointer truncate select-none">${h || `Column ${i+1}`}</label>
         `;
         div.addEventListener("click", (e) => {
              if(e.target.tagName !== 'INPUT') {
@@ -624,7 +658,6 @@ function processFile() {
     results = [];
     const seenRows = new Set();
 
-    // Loop starts at 1 because 0 is headers in workbookData
     for (let i = 1; i < workbookData.length; i++) {
         const row = workbookData[i];
         if (!row) continue;
@@ -719,24 +752,40 @@ function sortResults(colIndex) {
 function displayResults(hasNumbers) {
     let headerHTML = "";
     outputCols.forEach((idx, loopIndex) => {
-        let sortClass = "sortable";
+        let sortClass = "sortable hover:bg-slate-100 cursor-pointer transition-colors";
+        let iconClass = "fa-solid fa-sort text-slate-300 ml-2 text-xs";
+        
         if (currentSort.col === loopIndex) {
-            sortClass += currentSort.dir === 'asc' ? " asc" : " desc";
+            sortClass += " bg-slate-100";
+            iconClass = currentSort.dir === 'asc' 
+                ? "fa-solid fa-sort-up text-blue-600 ml-2 text-sm" 
+                : "fa-solid fa-sort-down text-blue-600 ml-2 text-sm";
         }
         
-        headerHTML += `<th onclick="sortResults(${loopIndex})" class="${sortClass} px-6 py-4 text-left text-lg font-extrabold text-slate-700 uppercase tracking-wider bg-slate-100 border-b border-slate-300 whitespace-nowrap">
-            ${headers[idx]} <span class="sort-icon"></span>
+        headerHTML += `<th onclick="sortResults(${loopIndex})" class="${sortClass} px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap select-none border-b border-slate-200">
+            <div class="flex items-center">
+                ${headers[idx]} 
+                <i class="${iconClass}"></i>
+            </div>
         </th>`;
     });
 
     if (hasNumbers) {
         const phoneColIndex = outputCols.length;
-        let sortClass = "sortable";
+        let sortClass = "sortable hover:bg-slate-100 cursor-pointer transition-colors";
+        let iconClass = "fa-solid fa-sort text-slate-300 ml-2 text-xs";
+        
         if (currentSort.col === phoneColIndex) {
-            sortClass += currentSort.dir === 'asc' ? " asc" : " desc";
+            sortClass += " bg-slate-100";
+            iconClass = currentSort.dir === 'asc' 
+                ? "fa-solid fa-sort-up text-blue-600 ml-2 text-sm" 
+                : "fa-solid fa-sort-down text-blue-600 ml-2 text-sm";
         }
-        headerHTML += `<th onclick="sortResults(${phoneColIndex})" class="${sortClass} px-6 py-4 text-left text-lg font-extrabold text-slate-700 uppercase tracking-wider bg-slate-100 border-b border-slate-300 whitespace-nowrap">
-            Extracted Numbers <span class="sort-icon"></span>
+        headerHTML += `<th onclick="sortResults(${phoneColIndex})" class="${sortClass} px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap select-none border-b border-slate-200">
+            <div class="flex items-center">
+                Extracted Numbers 
+                <i class="${iconClass}"></i>
+            </div>
         </th>`;
     }
     
@@ -745,7 +794,7 @@ function displayResults(hasNumbers) {
     if (results.length === 0) {
         resultTable.classList.add("hidden");
         emptyState.classList.remove("hidden");
-        resultStatus.textContent = "No matches found.";
+        resultStatus.textContent = "No matches found";
         downloadButtons.classList.add("hidden");
         return;
     }
@@ -753,32 +802,33 @@ function displayResults(hasNumbers) {
     emptyState.classList.add("hidden");
     resultTable.classList.remove("hidden");
     
-    const rowsHTML = results.map(row => {
-        return `<tr class="hover:bg-slate-50 transition-colors">` + 
-               row.map(cell => `<td class="px-6 py-6 whitespace-normal min-w-[200px] border-b border-slate-200">${cell.html}</td>`).join("") + 
+    const rowsHTML = results.map((row, i) => {
+        // Zebra Striping + Hover effect
+        const bgClass = i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+        return `<tr class="${bgClass} hover:bg-blue-50/50 transition-colors">` + 
+               row.map(cell => `<td class="px-6 py-5 whitespace-normal min-w-[200px] border-b border-slate-100">${cell.html}</td>`).join("") + 
                `</tr>`;
     }).join("");
 
     tableBody.innerHTML = rowsHTML;
-    resultStatus.textContent = `${results.length} matches`;
+    resultStatus.textContent = `${results.length} found`;
     downloadButtons.classList.remove("hidden");
 }
 
 function downloadHTML() {
     const tableClone = resultTable.cloneNode(true);
     tableClone.classList.remove("hidden");
-    
     const htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
             <title>Search Results</title>
             <style>
-                body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; }
+                body { font-family: sans-serif; padding: 20px; }
                 table { border-collapse: collapse; width: 100%; }
-                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 22px; }
-                th { background-color: #f2f2f2; font-weight: 800; }
-                .highlight { background-color: yellow; font-weight: 900; }
+                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                th { background-color: #f2f2f2; font-weight: bold; }
+                .highlight { background-color: yellow; font-weight: bold; }
             </style>
         </head>
         <body>
@@ -788,7 +838,6 @@ function downloadHTML() {
         </body>
         </html>
     `;
-    
     const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -799,12 +848,10 @@ function downloadHTML() {
 
 function downloadExcel() {
     const dataForSheet = results.map(row => row.map(cell => cell.text));
-    
     const headerRow = outputCols.map(idx => headers[idx]);
     if (document.getElementById("createNumbers").checked) {
         headerRow.push("Extracted Numbers");
     }
-    
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataForSheet]);
     XLSX.utils.book_append_sheet(wb, ws, "Results");
