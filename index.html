@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
-    <title>Private Vault Search</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Private Vault Search (Multi-File)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -17,10 +17,14 @@
         .control-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .highlight { background-color: #fef9c3; border-bottom: 3px solid #facc15; font-weight: 800; padding: 0 2px; }
         .modern-select { appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* Animation for file list items */
+        .file-item { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="text-slate-800">
@@ -34,8 +38,8 @@
                 <div>
                     <h1 class="text-xl font-bold text-slate-800">Private Vault Search</h1>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold bg-green-100 text-green-700 px-2 rounded">Secure Mode</span>
-                        <span class="text-xs text-slate-400">Clean Interface</span>
+                        <span class="text-xs font-semibold bg-green-100 text-green-700 px-2 rounded">Multi-File Mode</span>
+                        <span class="text-xs text-slate-400">Secure</span>
                     </div>
                 </div>
             </div>
@@ -53,9 +57,13 @@
     <div class="max-w-[1800px] mx-auto px-4 pb-10">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             
+            <!-- CARD 1: SOURCE -->
             <div class="control-card p-5 flex flex-col h-full">
-                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
-                    <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">1</span> Source
+                <h2 class="text-lg font-bold text-slate-800 flex items-center justify-between gap-2 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">1</span> Source
+                    </div>
+                    <button onclick="clearAllFiles()" id="clearAllBtn" class="hidden text-xs text-red-500 hover:text-red-700 font-bold uppercase">Clear All</button>
                 </h2>
 
                 <div class="flex-1 flex flex-col">
@@ -65,13 +73,13 @@
                         </button>
 
                         <div id="cloudFileSelection" class="hidden space-y-2">
-                            <label class="text-xs font-bold text-slate-500 uppercase ml-1">Select File</label>
+                            <label class="text-xs font-bold text-slate-500 uppercase ml-1">Add Cloud File</label>
                             <div class="flex gap-2">
                                 <select id="repoFiles" class="modern-select flex-1 bg-indigo-50 border border-indigo-200 text-indigo-900 text-sm rounded-lg p-2.5 font-bold focus:ring-2 focus:ring-indigo-500">
                                     <option>Scanning...</option>
                                 </select>
-                                <button onclick="loadSelectedFile()" id="loadCloudBtn" class="bg-indigo-600 text-white px-4 rounded-lg hover:bg-indigo-700 transition-colors">
-                                    <i class="fa-solid fa-download"></i>
+                                <button onclick="loadSelectedFile()" id="loadCloudBtn" class="bg-indigo-600 text-white px-4 rounded-lg hover:bg-indigo-700 transition-colors" title="Add File">
+                                    <i class="fa-solid fa-plus"></i>
                                 </button>
                             </div>
                             <button onclick="refreshFileList()" class="text-xs text-indigo-500 hover:text-indigo-700 font-medium ml-1 flex items-center gap-1">
@@ -86,20 +94,25 @@
                         <div class="flex-grow border-t border-slate-200"></div>
                     </div>
 
-                    <label class="flex flex-col items-center justify-center w-full h-20 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer hover:bg-slate-50">
+                    <label class="flex flex-col items-center justify-center w-full h-20 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
                         <div class="flex flex-col items-center justify-center pt-2 pb-3">
-                            <i class="fa-solid fa-computer text-xl text-slate-400 mb-1"></i>
-                            <p class="text-xs text-slate-500 font-medium">Browse Local File</p>
+                            <i class="fa-solid fa-folder-plus text-xl text-slate-400 mb-1"></i>
+                            <p class="text-xs text-slate-500 font-medium">Add Local Files</p>
                         </div>
-                        <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" class="hidden" />
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple class="hidden" />
                     </label>
 
-                    <div id="fileListContainer" class="mt-4 hidden">
-                         <div id="fileList" class="bg-green-50 border border-green-100 p-2 rounded-lg text-sm text-green-800 font-medium flex items-center gap-2"></div>
+                    <!-- Active File List -->
+                    <div id="fileListContainer" class="mt-4 hidden flex-1 flex flex-col min-h-[100px]">
+                         <label class="text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Active Files</label>
+                         <div id="fileList" class="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                            <!-- Items injected here -->
+                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- CARD 2: CONFIG -->
             <div class="control-card p-5 flex flex-col h-full">
                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
                     <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">2</span> Config
@@ -111,6 +124,7 @@
                             <select id="searchColumn" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg p-2.5 font-medium disabled:opacity-50" disabled>
                                 <option>Upload file first...</option>
                             </select>
+                            <p class="text-[10px] text-slate-400 mt-1 ml-1">*Using headers from first file</p>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Search Mode</label>
@@ -132,6 +146,7 @@
                 </div>
             </div>
 
+            <!-- CARD 3: OUTPUT -->
             <div class="control-card p-5 flex flex-col h-full">
                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
                     <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">3</span> Output
@@ -188,6 +203,7 @@
         </div>
     </div>
 
+    <!-- Security Modal -->
     <div id="securityModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-sm hidden">
         <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200 transform transition-all scale-100">
             <div class="text-center mb-6">
@@ -223,6 +239,7 @@ const searchMode = document.getElementById("searchMode");
 const keywordInputsDiv = document.getElementById("keywordInputs");
 const fileInput = document.getElementById("fileInput");
 
+// fileCache is now an array of objects: {id, name, headers, data, totalRows}
 let workbookData = [], headers = [], fileCache = [], results = [], outputCols = [];
 let currentSort = { col: -1, dir: 'asc' };
 let currentToken = ""; 
@@ -233,11 +250,12 @@ const SCHOOL_INTENT = ["school land", "school land for sale", "school plot", "sc
 const COLLEGE_INTENT = ["institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land", "college", "medical college", "institutional land", "school and college", "hospital and college", "running medical college", "existing engineering college", "private nursing college", "college land", "college land for sale", "college plot on main road", "college campus available", "medical college", "engineering college", "nursing college", "pharmacy college", "degree college", "running college", "existing college", "government college", "private college", "hotel college", "school and college", "hospital and college", "land college", "college land", "college plot", "college campus", "college building", "college site", "college available", "college for sale", "college road", "college and hospital", "college and school", "college property"];
 
 // --- INIT ---
-function log(msg) { console.log(msg); } // Silent log
+function log(msg) { console.log(msg); }
 
 renderKeywordInputs();
 searchMode.addEventListener('change', renderKeywordInputs);
 document.getElementById('userPass').addEventListener('keypress', function (e) { if (e.key === 'Enter') attemptLogin(); });
+// Support multiple files
 fileInput.addEventListener("change", handleLocalFile);
 
 // --- SECURITY ---
@@ -306,7 +324,7 @@ function refreshFileList() {
     fetchFileList().catch(e => alert(e.message));
 }
 
-// --- V5 SMART DOWNLOAD (Force Raw) ---
+// --- FILE LOADING (CLOUD) ---
 async function loadSelectedFile() {
     const name = document.getElementById('repoFiles').value;
     if (!name || name.includes("No Excel")) return alert("Select a file");
@@ -344,16 +362,22 @@ async function loadSelectedFile() {
 }
 
 // --- PARSER ---
+// Supports multiple files via standard Input
 function handleLocalFile(e) {
-    const file = e.target.files[0];
-    if(!file) return;
-    const r = new FileReader();
-    r.onload = (e) => parseExcelData(new Uint8Array(e.target.result), file.name);
-    r.readAsArrayBuffer(file);
+    const files = e.target.files;
+    if(!files.length) return;
+    
+    Array.from(files).forEach(file => {
+        const r = new FileReader();
+        r.onload = (evt) => parseExcelData(new Uint8Array(evt.target.result), file.name);
+        r.readAsArrayBuffer(file);
+    });
+    // Reset value so same file can be selected again if deleted
+    e.target.value = ''; 
 }
 
 function parseExcelData(data, name) {
-    log(`Parsing Excel...`);
+    log(`Parsing Excel... ${name}`);
     try {
         const wb = XLSX.read(data, {type:'array'});
         const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -362,53 +386,117 @@ function parseExcelData(data, name) {
         if(json.length > 0) {
             let h = json[0].map(x => String(x||"").trim());
             let d = json.slice(1);
-            fileCache = [{id: Date.now(), name: name, headers: h, data: d, totalRows: d.length}];
+            
+            // Add to cache (Multiple File Support)
+            const fileId = Date.now() + Math.floor(Math.random() * 1000);
+            fileCache.push({
+                id: fileId,
+                name: name, 
+                headers: h, 
+                data: d, 
+                totalRows: d.length
+            });
+
             recalculateCombinedData();
             renderFileList();
-            log("Success! Data loaded.");
+            log(`Success! ${name} loaded.`);
         } else {
-            log("File parsed but seems empty.");
-            alert("File is empty.");
+            alert(`File ${name} seems empty.`);
         }
     } catch (err) {
         log("XLSX Parse Error: " + err.message);
-        alert("Error parsing Excel file.\nCheck Debug Log.");
+        alert(`Error parsing ${name}.\nCheck Debug Log.`);
     }
 }
 
-// --- UI & LOGIC ---
+// --- LOGIC: MULTIPLE FILES MANAGEMENT ---
+
+function removeFile(id) {
+    fileCache = fileCache.filter(f => f.id !== id);
+    recalculateCombinedData();
+    renderFileList();
+}
+
+function clearAllFiles() {
+    if(!confirm("Remove all loaded files?")) return;
+    resetUI();
+}
+
 function recalculateCombinedData() {
-    if (!fileCache.length) { resetUI(); return; }
+    if (!fileCache.length) { resetUI(true); return; }
+
+    // Use headers from the FIRST file as the Master Structure
     headers = fileCache[0].headers;
-    workbookData = [headers, ...fileCache[0].data];
+    
+    // Combine data from all files
+    // Note: This assumes columns mostly align. 
+    workbookData = [headers]; 
+    let totalRows = 0;
+
+    fileCache.forEach(file => {
+        workbookData = workbookData.concat(file.data);
+        totalRows += file.totalRows;
+    });
+
+    // Update UI elements based on new combined data
     populateSearchColumns();
     populateOutputCheckboxes();
+    
     document.getElementById('searchBtn').disabled = false;
     document.getElementById('toggleColumnsBtn').disabled = false;
     searchColumnSel.disabled = false;
+    
     document.getElementById('globalStatus').innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span> Ready';
-    document.getElementById('resultStatus').textContent = `${workbookData.length - 1} rows loaded`;
+    document.getElementById('resultStatus').textContent = `${totalRows} rows (Total)`;
+    document.getElementById('clearAllBtn').classList.remove('hidden');
 }
 
 function renderFileList() {
     const list = document.getElementById('fileList');
+    const container = document.getElementById('fileListContainer');
+    
     if (!fileCache.length) { 
-        document.getElementById('fileListContainer').classList.add('hidden'); 
+        container.classList.add('hidden'); 
         return; 
     }
-    document.getElementById('fileListContainer').classList.remove('hidden');
-    const f = fileCache[0];
-    list.innerHTML = `<i class="fa-solid fa-file-excel text-green-600"></i> ${f.name} <span class="ml-auto text-xs bg-white px-2 rounded border">${f.totalRows} rows</span>`;
+    
+    container.classList.remove('hidden');
+    list.innerHTML = ""; // Clear list
+
+    fileCache.forEach(f => {
+        const item = document.createElement('div');
+        item.className = "file-item bg-white border border-slate-200 p-2.5 rounded-lg text-sm text-slate-700 flex items-center justify-between shadow-sm";
+        item.innerHTML = `
+            <div class="flex items-center gap-2 truncate">
+                <i class="fa-solid fa-file-excel text-green-600"></i>
+                <span class="font-medium truncate max-w-[140px]" title="${f.name}">${f.name}</span>
+                <span class="text-xs text-slate-400">(${f.totalRows})</span>
+            </div>
+            <button onclick="removeFile(${f.id})" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        `;
+        list.appendChild(item);
+    });
 }
 
-function resetUI() {
+function resetUI(keepLogin = false) {
     searchBtn.disabled = true; toggleColumnsBtn.disabled = true; searchColumnSel.disabled = true;
     searchColumnSel.innerHTML = "<option>Load file first...</option>";
     resultStatus.textContent = "Waiting...";
     document.getElementById('fileListContainer').classList.add('hidden');
+    document.getElementById('clearAllBtn').classList.add('hidden');
+    document.getElementById('tableHeader').innerHTML = "";
+    document.getElementById('tableBody').innerHTML = "";
+    document.getElementById('resultTable').classList.add('hidden');
+    document.getElementById('emptyState').classList.remove('hidden');
+    
     fileCache = [];
+    workbookData = [];
+    headers = [];
 }
 
+// --- STANDARD UI LOGIC (UNCHANGED) ---
 function populateSearchColumns() {
     searchColumnSel.innerHTML = "";
     headers.forEach((h, i) => {
@@ -471,6 +559,7 @@ function processFile() {
     results = [];
     const seen = new Set();
 
+    // Loop through combined workbookData (starts at 1 because index 0 is headers)
     for (let i = 1; i < workbookData.length; i++) {
         const row = workbookData[i]; if(!row) continue;
         const txt = String(row[colIdx]||"").toLowerCase();
