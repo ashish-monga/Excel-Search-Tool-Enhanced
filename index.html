@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Private Vault Search (Multi-File)</title>
+    <title>Private Vault Search (Export Pro)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -17,6 +17,7 @@
         .control-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .highlight { background-color: #fef9c3; border-bottom: 3px solid #facc15; font-weight: 800; padding: 0 2px; }
         .modern-select { appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
+        .custom-checkbox { width: 1rem; height: 1rem; border-radius: 0.25rem; }
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -39,7 +40,7 @@
                     <h1 class="text-xl font-bold text-slate-800">Private Vault Search</h1>
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-semibold bg-green-100 text-green-700 px-2 rounded">Multi-File Mode</span>
-                        <span class="text-xs text-slate-400">Secure</span>
+                        <span class="text-xs text-slate-400">Secure Export</span>
                     </div>
                 </div>
             </div>
@@ -185,9 +186,10 @@
                     <h2 class="text-lg font-bold text-slate-800">Results</h2>
                     <span id="resultStatus" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">Waiting...</span>
                 </div>
+                <!-- Updated Buttons trigger Modal -->
                 <div id="downloadButtons" class="hidden flex gap-2">
-                    <button onclick="downloadHTML()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2"><i class="fa-brands fa-html5 text-orange-500"></i> HTML</button>
-                    <button onclick="downloadExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow-md transition-colors flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                    <button onclick="openExportModal()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2"><i class="fa-brands fa-html5 text-orange-500"></i> HTML</button>
+                    <button onclick="openExportModal()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow-md transition-colors flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Excel</button>
                 </div>
             </div>
             <div class="flex-1 overflow-auto relative w-full bg-slate-50/30">
@@ -220,6 +222,52 @@
         </div>
     </div>
 
+    <!-- Export Options Modal (NEW) -->
+    <div id="exportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-200 transform transition-all scale-100">
+            <div class="text-center mb-4">
+                <h2 class="text-lg font-bold text-slate-800">Export Settings</h2>
+                <p class="text-slate-500 text-xs mt-1">Configure your file before downloading.</p>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <!-- Option 1: Include Phone Numbers -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-slate-700">Include Phone Numbers?</span>
+                        <span class="text-[10px] text-slate-400">If No, numbers & PII are scrubbed.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="exportIncludePhones" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Option 2: Extract Name -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-slate-700">Extract Contact Name?</span>
+                        <span class="text-[10px] text-slate-400">Adds column with words near phone.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="exportExtractNames" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="executeExport('html')" class="bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-html5"></i> HTML
+                </button>
+                <button onclick="executeExport('excel')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </button>
+            </div>
+            <button onclick="document.getElementById('exportModal').classList.add('hidden')" class="w-full text-slate-400 text-xs font-bold mt-4 hover:text-slate-600">CANCEL</button>
+        </div>
+    </div>
+
 <script>
 // ==========================================
 // 🔴 CONFIGURATION - EDIT THIS SECTION
@@ -229,8 +277,20 @@ const CONFIG = {
     repo: "office",          // Your Private Repo Name
     
     // Paste your Long Encrypted String here:
-    ENCRYPTED_KEY: "U2FsdGVkX19fPphiUw4ThQdYVNrGF4vBc41mIBSDfxMhWMpr4Uj3Jk/ZKgJ3XqNTHCjBpwjGhIGmMNQTKDwfKQ==" 
+    ENCRYPTED_KEY: "U2FsdGVkX19egqpoep4HkDSNlKtxcrQ3/kGE5ebDoAEyEym/hk364BAJXA21N1W0EvTMphhTf6oGQjG8PMBlsQ==" 
 };
+
+// 🔴 ADVANCED EXPORT CONFIGURATION
+// Matches: +91, spaces, 10-15 digits, parenthesis
+const PHONE_REGEX_GLOBAL = /(?:\+?\d{1,4}[\s-]?)?(?:\d{10,15}|(?:\(?\d{2,5}\)?[\s-]?){2,5}\d{2,5})/gi;
+
+const SCRUB_KEYWORDS = [
+    "mr.", "mr ", "mrs.", "mrs ", "estate", "dealer", "dealers", "consultant", "consultants", 
+    "contact", "owner", "director", "partner", "whatsapp", "ventures", "housing", "infra", 
+    "agent", "broker", "home", "homes", "http", "https", "facebook", "instagram", 
+    ".com", ".in", "@gmail", "@yahoo"
+];
+
 // ==========================================
 
 // --- GLOBALS & REFERENCES ---
@@ -247,7 +307,7 @@ let currentToken = "";
 // --- INTENT LISTS ---
 const HOSPITAL_INTENT = ["running hospital","operational hospital","functional hospital","existing hospital","hospital with beds","hospital beds","bed hospital","speciality hospital","multispeciality hospital","hospital land","hospital plot","hospital building","hospital structure","hospital structure only","hospital approved land","land for hospital","reserved for hospital","medical land","institutional land hospital","hospital for sale","hospital available","hospital property","nursing home", "clinic space", "medical center", "institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land"];
 const SCHOOL_INTENT = ["school land", "school land for sale", "school plot", "school plots", "school site", "school site available", "school building", "school property", "school campus", "school available", "school at", "school road", "school main road", "school and college", "school and hospital", "running school", "running nursery school", "play school running", "cbse school operational", "nursery school", "nursary school", "play school", "public school", "primary school", "cbse school", "dps school", "boarding school", "day school", "hospital school", "hotel school", "school and hospital", "school and college", "sale school", "cbse", "institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land"];
-const COLLEGE_INTENT = ["institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land", "college", "medical college", "institutional land", "school and college", "hospital and college", "running medical college", "existing engineering college", "private nursing college", "college land", "college land for sale", "college plot on main road", "college campus available", "medical college", "engineering college", "nursing college", "pharmacy college", "degree college", "running college", "existing college", "government college", "private college", "hotel college", "school and college", "hospital and college", "land college", "college land", "college plot", "college campus", "college building", "college site", "college available", "college for sale", "college road", "college and hospital", "college and school", "college property"];
+const COLLEGE_INTENT = ["institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land", "college", "medical college", "institutional land", "school and college", "hospital and college", "running medical college", "existing engineering college", "private nursing college", "college land", "college land for sale", "college plot on main road", "college campus available", "medical college", "engineering college", "nursing college", "pharmacy college", "degree college", "running college", "existing college", "government college", "private college", "hotel college", "school and college", "hospital and college", "land college", "college land", "college plot", "college campus", "college building", "college site", "college available", "college for sale", "college road", "college and hospital", "college and school", "college and hospital", "college and school", "college property"];
 
 // --- INIT ---
 function log(msg) { console.log(msg); }
@@ -362,7 +422,6 @@ async function loadSelectedFile() {
 }
 
 // --- PARSER ---
-// Supports multiple files via standard Input
 function handleLocalFile(e) {
     const files = e.target.files;
     if(!files.length) return;
@@ -372,7 +431,6 @@ function handleLocalFile(e) {
         r.onload = (evt) => parseExcelData(new Uint8Array(evt.target.result), file.name);
         r.readAsArrayBuffer(file);
     });
-    // Reset value so same file can be selected again if deleted
     e.target.value = ''; 
 }
 
@@ -387,7 +445,6 @@ function parseExcelData(data, name) {
             let h = json[0].map(x => String(x||"").trim());
             let d = json.slice(1);
             
-            // Add to cache (Multiple File Support)
             const fileId = Date.now() + Math.floor(Math.random() * 1000);
             fileCache.push({
                 id: fileId,
@@ -424,28 +481,18 @@ function clearAllFiles() {
 
 function recalculateCombinedData() {
     if (!fileCache.length) { resetUI(true); return; }
-
-    // Use headers from the FIRST file as the Master Structure
     headers = fileCache[0].headers;
-    
-    // Combine data from all files
-    // Note: This assumes columns mostly align. 
     workbookData = [headers]; 
     let totalRows = 0;
-
     fileCache.forEach(file => {
         workbookData = workbookData.concat(file.data);
         totalRows += file.totalRows;
     });
-
-    // Update UI elements based on new combined data
     populateSearchColumns();
     populateOutputCheckboxes();
-    
     document.getElementById('searchBtn').disabled = false;
     document.getElementById('toggleColumnsBtn').disabled = false;
     searchColumnSel.disabled = false;
-    
     document.getElementById('globalStatus').innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span> Ready';
     document.getElementById('resultStatus').textContent = `${totalRows} rows (Total)`;
     document.getElementById('clearAllBtn').classList.remove('hidden');
@@ -454,15 +501,9 @@ function recalculateCombinedData() {
 function renderFileList() {
     const list = document.getElementById('fileList');
     const container = document.getElementById('fileListContainer');
-    
-    if (!fileCache.length) { 
-        container.classList.add('hidden'); 
-        return; 
-    }
-    
+    if (!fileCache.length) { container.classList.add('hidden'); return; }
     container.classList.remove('hidden');
-    list.innerHTML = ""; // Clear list
-
+    list.innerHTML = "";
     fileCache.forEach(f => {
         const item = document.createElement('div');
         item.className = "file-item bg-white border border-slate-200 p-2.5 rounded-lg text-sm text-slate-700 flex items-center justify-between shadow-sm";
@@ -490,13 +531,10 @@ function resetUI(keepLogin = false) {
     document.getElementById('tableBody').innerHTML = "";
     document.getElementById('resultTable').classList.add('hidden');
     document.getElementById('emptyState').classList.remove('hidden');
-    
-    fileCache = [];
-    workbookData = [];
-    headers = [];
+    fileCache = []; workbookData = []; headers = [];
 }
 
-// --- STANDARD UI LOGIC (UNCHANGED) ---
+// --- UI LOGIC ---
 function populateSearchColumns() {
     searchColumnSel.innerHTML = "";
     headers.forEach((h, i) => {
@@ -510,7 +548,6 @@ function populateSearchColumns() {
 function populateOutputCheckboxes() {
     const drop = document.getElementById('columnDropdown');
     drop.innerHTML = `<div class="flex items-center p-3 hover:bg-slate-50 border-b border-slate-100 cursor-pointer"><input type="checkbox" id="selectAllCols" class="custom-checkbox mr-3"><span class="text-sm font-bold">Select All</span></div>`;
-    
     headers.forEach((h, i) => {
         const div = document.createElement("div");
         div.className = "flex items-center p-2.5 hover:bg-slate-50 cursor-pointer";
@@ -559,7 +596,6 @@ function processFile() {
     results = [];
     const seen = new Set();
 
-    // Loop through combined workbookData (starts at 1 because index 0 is headers)
     for (let i = 1; i < workbookData.length; i++) {
         const row = workbookData[i]; if(!row) continue;
         const txt = String(row[colIdx]||"").toLowerCase();
@@ -619,9 +655,126 @@ function displayResults(hasPh) {
     document.getElementById('resultStatus').textContent = `${results.length} found`;
 }
 
+// ==========================================
+// 🔴 NEW EXPORT LOGIC
+// ==========================================
+
+function openExportModal() {
+    document.getElementById('exportModal').classList.remove('hidden');
+}
+
+function cleanText(text) {
+    if (!text) return "";
+    let clean = text;
+
+    // 1. Scrub Keywords (Emails, Housing terms, Agent names) + 3 words context
+    // Pattern: (3 words) KEYWORD (3 words) -> " "
+    SCRUB_KEYWORDS.forEach(kw => {
+        const regex = new RegExp(`((?:\\S+\\s+){0,3})${escapeRegExp(kw)}((?:\\s+\\S+){0,3})`, "gi");
+        clean = clean.replace(regex, " "); 
+    });
+
+    // 2. Scrub Phones + 4 words context
+    // Pattern: (4 words) PHONE (4 words) -> " "
+    clean = clean.replace(new RegExp(`((?:\\S+\\s+){0,4})${PHONE_REGEX_GLOBAL.source}((?:\\s+\\S+){0,4})`, "gi"), " ");
+
+    return clean.replace(/\s+/g, ' ').trim(); // Collapse spaces
+}
+
+function extractContext(text) {
+    if(!text) return "";
+    const matches = [...text.matchAll(PHONE_REGEX_GLOBAL)];
+    if(matches.length === 0) return "";
+
+    // Extract 3 words before and 3 words after the FIRST phone number found
+    // Using a regex on the specific match area
+    const match = matches[0];
+    const phone = match[0];
+    const index = match.index;
+    
+    // Substrings
+    const before = text.substring(Math.max(0, index - 50), index);
+    const after = text.substring(index + phone.length, Math.min(text.length, index + phone.length + 50));
+
+    // Get last 3 words of 'before' and first 3 words of 'after'
+    const wordsBefore = before.trim().split(/\s+/).slice(-3).join(" ");
+    const wordsAfter = after.trim().split(/\s+/).slice(0, 3).join(" ");
+
+    return `${wordsBefore} [${phone}] ${wordsAfter}`.trim();
+}
+
+function executeExport(type) {
+    document.getElementById('exportModal').classList.add('hidden');
+    const includeNumbers = document.getElementById('exportIncludePhones').checked;
+    const extractNames = document.getElementById('exportExtractNames').checked;
+    const createNumbers = document.getElementById("createNumbers").checked;
+    
+    // Headers
+    let h = outputCols.map(i => headers[i]);
+    if (createNumbers && includeNumbers) h.push("Phones");
+    if (extractNames && includeNumbers) h.push("Context/Name");
+
+    // Data Transformation
+    const d = results.map(r => {
+        // r is array of {html, text}. Corresponds to outputCols.
+        // We need to act on the specific column that is "Description" (usually checked via searchColumnSel)
+        
+        let rowData = r.map((c, i) => {
+             // If NOT including numbers, we must scrub the text
+             // We assume the user wants to scrub ALL columns to be safe, or primarily the text columns
+             // Let's scrub everything if includeNumbers is False
+             if (!includeNumbers) return cleanText(c.text);
+             return c.text;
+        });
+
+        // Add Phone Column if requested (and safe)
+        if (createNumbers && includeNumbers) {
+            // We need to find the phone number again from the source text (last element of r usually if we added it? No, r is built from outputCols)
+            // r is built in processFile. Last item in `results` array entry might be phone if createNumbers was checked.
+            // Let's look at the result array construction in processFile:
+            // if(createNumbers) out.push(...) -> it's the last item
+            rowData.push(r[r.length-1].text); 
+        } else if (createNumbers && !includeNumbers) {
+            // Remove the phone column data if it was in the display array
+            rowData.pop(); 
+        }
+
+        // Add Context Name Column
+        if (extractNames && includeNumbers) {
+            // Find the description column text to extract from. 
+            // We use the full text of the row's Target Column (from searchColumnSel)
+            // But `results` only contains `outputCols`.
+            // We need to find which outputCol index corresponds to the searchColumn index.
+            // Simplified: Just concatenate the full row text and search context there? 
+            // Better: Use the text from the first large column found.
+            const fullText = rowData.join(" ");
+            rowData.push(extractContext(fullText));
+        }
+
+        return rowData;
+    });
+
+    if (type === 'excel') {
+        const ws = XLSX.utils.aoa_to_sheet([h, ...d]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Results");
+        XLSX.writeFile(wb, "results_scrubbed.xlsx");
+    } else {
+        // Generate HTML Table for export
+        let html = `<table border="1" style="border-collapse: collapse;"><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
+        d.forEach(row => {
+            html += `<tr>${row.map(x=>`<td>${x}</td>`).join('')}</tr>`;
+        });
+        html += `</tbody></table>`;
+        
+        const b = new Blob([`<html><body>${html}</body></html>`], {type:"text/html"});
+        const a = document.createElement("a"); a.href=URL.createObjectURL(b); a.download="results_scrubbed.html"; a.click();
+    }
+}
+
 // UTILS
 function extNums(t, d) {
-    const m = String(t||"").match(/(?:\+?\d{1,4}[\s-]?)?\(?\d{2,5}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/g) || [];
+    const m = String(t||"").match(PHONE_REGEX_GLOBAL) || [];
     let n = m.map(x=>x.replace(/[^\d+]/g,'')).filter(x=>x.length>6);
     if(d) n = [...new Set(n)];
     return n.join(", ");
@@ -650,21 +803,6 @@ function renderKeywordInputs() {
     if(["hospital","school","college"].includes(m)) { k.innerHTML=`<div class="text-sm text-blue-600 bg-blue-50 p-2 rounded">Intent: ${m.toUpperCase()}</div>`; return; }
     const n = m==="4"?1:parseInt(m);
     for(let i=0;i<n;i++) k.innerHTML += `<input class="keyword-input w-full bg-slate-50 border border-slate-200 rounded p-2 mb-2 text-sm" placeholder="Keyword ${i+1}">`;
-}
-function downloadExcel() {
-    const d = results.map(r=>r.map(c=>c.text));
-    const h = outputCols.map(i=>headers[i]);
-    if(document.getElementById("createNumbers").checked) h.push("Phones");
-    const ws = XLSX.utils.aoa_to_sheet([h, ...d]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Results");
-    XLSX.writeFile(wb, "results.xlsx");
-}
-function downloadHTML() {
-    const c = document.getElementById('resultTable').cloneNode(true);
-    c.classList.remove("hidden");
-    const b = new Blob([`<html><body>${c.outerHTML}</body></html>`], {type:"text/html"});
-    const a = document.createElement("a"); a.href=URL.createObjectURL(b); a.download="results.html"; a.click();
 }
 
 // EVENTS
