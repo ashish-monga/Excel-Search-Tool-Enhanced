@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Private Vault Search (Export Pro)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(226, 232, 240, 0.8); }
+        .control-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .highlight { background-color: #fef9c3; border-bottom: 3px solid #facc15; font-weight: 800; padding: 0 2px; }
+        .modern-select { appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
+        .custom-checkbox { width: 1rem; height: 1rem; border-radius: 0.25rem; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .file-item { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <header class="glass-header sticky top-0 z-30 px-6 py-4 mb-6">
+        <div class="max-w-[1800px] mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">Private Vault Search</h1>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold bg-green-100 text-green-700 px-2 rounded">Multi-File Mode</span>
+                        <span class="text-xs text-slate-400">Secure Export</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                 <div id="globalStatus" class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-100 animate-pulse">
+                    <span class="w-2 h-2 bg-green-500 rounded-full"></span> Ready
+                </div>
+                <button id="logoutBtn" onclick="secureLogout()" class="hidden flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-full border border-red-200 transition-colors">
+                    <i class="fa-solid fa-right-from-bracket"></i> Exit
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-[1800px] mx-auto px-4 pb-10">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- CARD 1: SOURCE -->
+            <div class="control-card p-5 flex flex-col h-full">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center justify-between gap-2 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">1</span> Source
+                    </div>
+                    <button onclick="clearAllFiles()" id="clearAllBtn" class="hidden text-xs text-red-500 hover:text-red-700 font-bold uppercase">Clear All</button>
+                </h2>
+                <div class="flex-1 flex flex-col">
+                    <div class="mb-4">
+                        <button id="loginBtn" onclick="openCloudModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 mb-2">
+                            <i class="fa-solid fa-key"></i> Login to Vault
+                        </button>
+                        <div id="cloudFileSelection" class="hidden space-y-2">
+                            <label class="text-xs font-bold text-slate-500 uppercase ml-1">Add Cloud File</label>
+                            <div class="flex gap-2">
+                                <select id="repoFiles" class="modern-select flex-1 bg-indigo-50 border border-indigo-200 text-indigo-900 text-sm rounded-lg p-2.5 font-bold focus:ring-2 focus:ring-indigo-500">
+                                    <option>Scanning...</option>
+                                </select>
+                                <button onclick="loadSelectedFile()" id="loadCloudBtn" class="bg-indigo-600 text-white px-4 rounded-lg hover:bg-indigo-700 transition-colors" title="Add File">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                            <button onclick="refreshFileList()" class="text-xs text-indigo-500 hover:text-indigo-700 font-medium ml-1 flex items-center gap-1">
+                                <i class="fa-solid fa-rotate"></i> Refresh List
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative flex items-center py-2 mb-4">
+                        <div class="flex-grow border-t border-slate-200"></div>
+                        <span class="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase font-bold">Or Local File</span>
+                        <div class="flex-grow border-t border-slate-200"></div>
+                    </div>
+                    <label class="flex flex-col items-center justify-center w-full h-20 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                        <div class="flex flex-col items-center justify-center pt-2 pb-3">
+                            <i class="fa-solid fa-folder-plus text-xl text-slate-400 mb-1"></i>
+                            <p class="text-xs text-slate-500 font-medium">Add Local Files</p>
+                        </div>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple class="hidden" />
+                    </label>
+                    <div id="fileListContainer" class="mt-4 hidden flex-1 flex flex-col min-h-[100px]">
+                         <label class="text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Active Files</label>
+                         <div id="fileList" class="space-y-2 max-h-[200px] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 2: CONFIG -->
+            <div class="control-card p-5 flex flex-col h-full">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">2</span> Config
+                </h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Target Column</label>
+                            <select id="searchColumn" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg p-2.5 font-medium disabled:opacity-50" disabled>
+                                <option>Upload file first...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Search Mode</label>
+                            <select id="searchMode" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg p-2.5 font-medium">
+                                <option value="1">1 Keyword</option>
+                                <option value="2">2 Keywords (AND)</option>
+                                <option value="3">3 Keywords (AND)</option>
+                                <option value="4">Exact Phrase</option>
+                                <option value="hospital">Hospital (Intent)</option>
+                                <option value="school">School (Intent)</option>
+                                <option value="college">College (Intent)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Keywords</label>
+                        <div id="keywordInputs" class="space-y-2 max-h-[160px] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 3: OUTPUT -->
+            <div class="control-card p-5 flex flex-col h-full">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">3</span> Output
+                </h2>
+                <div class="space-y-4 flex-1">
+                    <div class="relative">
+                        <button id="toggleColumnsBtn" class="w-full flex justify-between items-center bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg p-2.5 hover:bg-slate-100 transition-colors" disabled>
+                            <span>Select Output Columns</span>
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                        </button>
+                        <div id="columnDropdown" class="hidden absolute z-50 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto p-2 space-y-1"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="col-span-2">
+                             <select id="fontSizeSelect" class="modern-select w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg p-2 font-medium">
+                                <option value="text-sm" selected>Font: Small</option>
+                                <option value="text-[26px]">Font: Large (26px)</option>
+                            </select>
+                        </div>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 cursor-pointer"><input type="checkbox" id="keepLine" checked class="custom-checkbox mr-3"><span class="text-sm font-medium text-slate-600">Snippet</span></label>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 cursor-pointer"><input type="checkbox" id="dropDuplicates" checked class="custom-checkbox mr-3"><span class="text-sm font-medium text-slate-600">Unique</span></label>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 cursor-pointer"><input type="checkbox" id="appendContact" checked class="custom-checkbox mr-3"><span class="text-sm font-medium text-slate-600">Add Phone</span></label>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 cursor-pointer"><input type="checkbox" id="createNumbers" checked class="custom-checkbox mr-3"><span class="text-sm font-medium text-slate-600">Phone Col</span></label>
+                        <label class="flex items-center p-2 rounded-lg hover:bg-slate-50 cursor-pointer col-span-2"><input type="checkbox" id="dedupNumbers" checked class="custom-checkbox mr-3"><span class="text-sm font-medium text-slate-600">Unique Phones/Cell</span></label>
+                    </div>
+                </div>
+                <button onclick="processFile()" id="searchBtn" disabled class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:shadow-none">
+                    <i class="fa-solid fa-magnifying-glass"></i> Run Search
+                </button>
+            </div>
+        </div>
+
+        <!-- RESULTS CONTAINER -->
+        <div id="resultsWrapper" class="control-card overflow-hidden flex flex-col h-[700px]">
+            <div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center sticky top-0 z-20">
+                <div class="flex items-center gap-4">
+                    <button id="backToResultsBtn" onclick="toggleDetailView(false)" class="hidden mr-2 p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h2 id="resultsHeading" class="text-lg font-bold text-slate-800">Results</h2>
+                    <span id="resultStatus" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">Waiting...</span>
+                </div>
+                <div id="downloadButtons" class="hidden flex gap-2">
+                    <button onclick="openExportModal()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2"><i class="fa-brands fa-html5 text-orange-500"></i> HTML</button>
+                    <button onclick="openExportModal()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow-md transition-colors flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                </div>
+            </div>
+
+            <!-- TABLE VIEW -->
+            <div id="tableView" class="flex-1 overflow-auto relative w-full bg-slate-50/30">
+                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-magnifying-glass-chart text-6xl mb-4"></i>
+                    <p class="text-lg font-medium text-slate-400">Results will appear here</p>
+                </div>
+                <table id="resultTable" class="min-w-full divide-y divide-slate-200 hidden border-collapse text-left">
+                    <thead class="bg-slate-50/90 backdrop-blur sticky top-0 z-10 shadow-sm"><tr id="tableHeader"></tr></thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-slate-100 text-sm font-bold text-slate-800 leading-relaxed"></tbody>
+                </table>
+            </div>
+
+            <!-- DETAIL VIEW -->
+            <div id="detailView" class="hidden flex-1 overflow-auto bg-white p-8">
+                <div class="max-w-4xl mx-auto">
+                    <div id="detailContent" class="text-slate-800 leading-relaxed whitespace-pre-wrap break-words border-l-4 border-indigo-500 pl-6 py-2"></div>
+                    <div class="mt-10 pt-6 border-t border-slate-100 flex justify-center">
+                        <button onclick="toggleDetailView(false)" class="bg-slate-800 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-slate-900 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-arrow-left"></i> Back to All Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="securityModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200 transform transition-all scale-100">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-600"><i class="fa-solid fa-key text-3xl"></i></div>
+                <h2 class="text-xl font-bold text-slate-800">Access Vault</h2>
+                <p class="text-slate-500 text-sm mt-2">Enter your password.</p>
+            </div>
+            <div class="space-y-4">
+                <input type="password" id="userPass" placeholder="Enter Password" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg p-3 text-center text-lg font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+                <button onclick="attemptLogin()" id="unlockBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all">Unlock</button>
+                <button onclick="document.getElementById('securityModal').classList.add('hidden')" class="w-full text-slate-400 text-sm hover:text-slate-600">Cancel</button>
+                <p id="loaderMsg" class="text-center text-xs font-bold text-red-500 h-5"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-200 transform transition-all scale-100">
+            <div class="text-center mb-4">
+                <h2 class="text-lg font-bold text-slate-800">Export Settings</h2>
+                <p class="text-slate-500 text-xs mt-1">Configure your file before downloading.</p>
+            </div>
+            <div class="space-y-4 mb-6">
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-slate-700">Include Phone Numbers?</span>
+                        <span class="text-[10px] text-slate-400">If No, numbers & PII are scrubbed.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="exportIncludePhones" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-slate-700">Extract Contact Name?</span>
+                        <span class="text-[10px] text-slate-400">Adds column with words near phone.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="exportExtractNames" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="executeExport('html')" class="bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-html5"></i> HTML
+                </button>
+                <button onclick="executeExport('excel')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </button>
+            </div>
+            <button onclick="document.getElementById('exportModal').classList.add('hidden')" class="w-full text-slate-400 text-xs font-bold mt-4 hover:text-slate-600">CANCEL</button>
+        </div>
+    </div>
+
+<script>
+// --- CONFIG & GLOBALS ---
+const CONFIG = {
+    user: "ashish-monga", repo: "office",
+    ENCRYPTED_KEY: "U2FsdGVkX19egqpoep4HkDSNlKtxcrQ3/kGE5ebDoAEyEym/hk364BAJXA21N1W0EvTMphhTf6oGQjG8PMBlsQ==" 
+};
+const PHONE_REGEX_GLOBAL = /(?:\+?\d{1,4}[\s-]?)?(?:\d{10,15}|(?:\(?\d{2,5}\)?[\s-]?){2,5}\d{2,5})/gi;
+const SCRUB_KEYWORDS = ["mr.", "mr ", "mrs.", "mrs ", "estate", "dealer", "dealers", "consultant", "consultants", "contact", "owner", "director", "partner", "whatsapp", "ventures", "housing", "infra", "agent", "broker", "home", "homes", "http", "https", "facebook", "instagram", ".com", ".in", "@gmail", "@yahoo"];
+
+const searchColumnSel = document.getElementById("searchColumn");
+const searchMode = document.getElementById("searchMode");
+const keywordInputsDiv = document.getElementById("keywordInputs");
+const fileInput = document.getElementById("fileInput");
+
+let workbookData = [], headers = [], fileCache = [], results = [], outputCols = [];
+let currentSort = { col: -1, dir: 'asc' };
+let currentToken = ""; 
+
+const HOSPITAL_INTENT = ["running hospital","operational hospital","functional hospital","existing hospital","hospital with beds","hospital beds","bed hospital","speciality hospital","multispeciality hospital","hospital land","hospital plot","hospital building","hospital structure","hospital structure only","hospital approved land","land for hospital","reserved for hospital","medical land","institutional land hospital","hospital for sale","hospital available","hospital property","nursing home", "clinic space", "medical center", "institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land"];
+const SCHOOL_INTENT = ["school land", "school land for sale", "school plot", "school plots", "school site", "school site available", "school building", "school property", "school campus", "school available", "school at", "school road", "school main road", "school and college", "school and hospital", "running school", "running nursery school", "play school running", "cbse school operational", "nursery school", "nursary school", "play school", "public school", "primary school", "cbse school", "dps school", "boarding school", "day school", "hospital school", "hotel school", "school and hospital", "school and college", "sale school", "cbse", "institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land"];
+const COLLEGE_INTENT = ["institutional", "institutional site", "institutional zone", "approved institutional", "institutional plot", "institutional land", "college", "medical college", "institutional land", "school and college", "hospital and college", "running medical college", "existing engineering college", "private nursing college", "college land", "college land for sale", "college plot on main road", "college campus available", "medical college", "engineering college", "nursing college", "pharmacy college", "degree college", "running college", "existing college", "government college", "private college", "hotel college", "school and college", "hospital and college", "land college", "college land", "college plot", "college campus", "college building", "college site", "college available", "college for sale", "college road", "college and hospital", "college and school", "college and hospital", "college and school", "college property"];
+
+// --- AUTH & FILE MGMT ---
+renderKeywordInputs();
+searchMode.addEventListener('change', renderKeywordInputs);
+document.getElementById('userPass').addEventListener('keypress', e => { if (e.key === 'Enter') attemptLogin(); });
+fileInput.addEventListener("change", handleLocalFile);
+
+function openCloudModal() {
+    const saved = sessionStorage.getItem('session_pass'); 
+    if (saved) { document.getElementById('userPass').value = saved; attemptLogin(); } 
+    else { document.getElementById('securityModal').classList.remove('hidden'); document.getElementById('userPass').focus(); }
+}
+function secureLogout() {
+    sessionStorage.removeItem('session_pass'); currentToken = "";
+    resetUI();
+    document.getElementById('logoutBtn').classList.add('hidden');
+    document.getElementById('cloudFileSelection').classList.add('hidden');
+    document.getElementById('loginBtn').classList.remove('hidden');
+}
+async function attemptLogin() {
+    const pass = document.getElementById('userPass').value;
+    const btn = document.getElementById('unlockBtn');
+    const msg = document.getElementById('loaderMsg');
+    if(!pass) return msg.textContent = "Enter password";
+    btn.disabled = true; btn.innerHTML = 'Authenticating...';
+    try {
+        const bytes = CryptoJS.AES.decrypt(CONFIG.ENCRYPTED_KEY, pass);
+        const token = bytes.toString(CryptoJS.enc.Utf8);
+        if (!token || !token.startsWith("ghp_")) throw new Error();
+        currentToken = token; 
+        await fetchFileList(); 
+        sessionStorage.setItem('session_pass', pass);
+        document.getElementById('securityModal').classList.add('hidden');
+        document.getElementById('loginBtn').classList.add('hidden'); 
+        document.getElementById('cloudFileSelection').classList.remove('hidden'); 
+        document.getElementById('logoutBtn').classList.remove('hidden');
+    } catch (err) { msg.textContent = "Login Failed"; } finally { btn.disabled = false; btn.innerHTML = "Unlock"; }
+}
+async function fetchFileList() {
+    const url = `https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/`;
+    const res = await fetch(url, { headers: { 'Authorization': `token ${currentToken}` } });
+    const files = await res.json();
+    const excel = files.filter(f => f.name.match(/\.xls[xm]?$/));
+    const sel = document.getElementById('repoFiles');
+    sel.innerHTML = excel.length ? "" : "<option>No Excel Files</option>";
+    excel.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.name; opt.textContent = f.name; sel.appendChild(opt);
+    });
+}
+function refreshFileList() {
+    document.getElementById('repoFiles').innerHTML = "<option>Refreshing...</option>";
+    fetchFileList().catch(e => alert(e.message));
+}
+async function loadSelectedFile() {
+    const name = document.getElementById('repoFiles').value;
+    if (!name || name.includes("No Excel")) return;
+    const btn = document.getElementById('loadCloudBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    try {
+        const url = `https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/${encodeURIComponent(name)}`;
+        const res = await fetch(url, { headers: { 'Authorization': `token ${currentToken}`, 'Accept': 'application/vnd.github.v3.raw' } });
+        const data = await res.arrayBuffer();
+        parseExcelData(new Uint8Array(data), name);
+    } catch(err) { alert("Download Failed"); } finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-plus"></i>'; }
+}
+
+function handleLocalFile(e) {
+    Array.from(e.target.files).forEach(file => {
+        const r = new FileReader();
+        r.onload = evt => parseExcelData(new Uint8Array(evt.target.result), file.name);
+        r.readAsArrayBuffer(file);
+    });
+    e.target.value = ''; 
+}
+function parseExcelData(data, name) {
+    try {
+        const wb = XLSX.read(data, {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, {header:1});
+        if(json.length > 0) {
+            fileCache.push({ id: Date.now()+Math.random(), name, headers: json[0].map(x=>String(x||"").trim()), data: json.slice(1), totalRows: json.length-1 });
+            recalculateCombinedData();
+            renderFileList();
+        }
+    } catch (err) { alert(`Error parsing file.`); }
+}
+function removeFile(id) { fileCache = fileCache.filter(f => f.id !== id); recalculateCombinedData(); renderFileList(); }
+function clearAllFiles() { if(confirm("Remove all?")) resetUI(); }
+function recalculateCombinedData() {
+    if (!fileCache.length) { resetUI(); return; }
+    headers = fileCache[0].headers;
+    workbookData = [headers]; 
+    let totalRows = 0;
+    fileCache.forEach(file => { workbookData = workbookData.concat(file.data); totalRows += file.totalRows; });
+    populateSearchColumns();
+    populateOutputCheckboxes();
+    document.getElementById('searchBtn').disabled = false;
+    document.getElementById('toggleColumnsBtn').disabled = false;
+    searchColumnSel.disabled = false;
+    document.getElementById('globalStatus').innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span> Ready';
+    document.getElementById('resultStatus').textContent = `${totalRows} rows`;
+    document.getElementById('clearAllBtn').classList.remove('hidden');
+}
+function renderFileList() {
+    const list = document.getElementById('fileList');
+    const container = document.getElementById('fileListContainer');
+    if (!fileCache.length) { container.classList.add('hidden'); return; }
+    container.classList.remove('hidden');
+    list.innerHTML = "";
+    fileCache.forEach(f => {
+        const item = document.createElement('div');
+        item.className = "file-item bg-white border border-slate-200 p-2.5 rounded-lg text-sm flex items-center justify-between shadow-sm";
+        item.innerHTML = `<div class="flex items-center gap-2 truncate"><i class="fa-solid fa-file-excel text-green-600"></i><span class="font-medium truncate max-w-[140px]">${f.name}</span></div><button onclick="removeFile(${f.id})" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times"></i></button>`;
+        list.appendChild(item);
+    });
+}
+function resetUI() {
+    document.getElementById('searchBtn').disabled = true; document.getElementById('toggleColumnsBtn').disabled = true; searchColumnSel.disabled = true;
+    searchColumnSel.innerHTML = "<option>Upload file...</option>";
+    document.getElementById('resultStatus').textContent = "Waiting...";
+    document.getElementById('fileListContainer').classList.add('hidden');
+    document.getElementById('clearAllBtn').classList.add('hidden');
+    document.getElementById('tableHeader').innerHTML = "";
+    document.getElementById('tableBody').innerHTML = "";
+    document.getElementById('resultTable').classList.add('hidden');
+    document.getElementById('emptyState').classList.remove('hidden');
+    fileCache = []; workbookData = []; headers = [];
+}
+function populateSearchColumns() {
+    searchColumnSel.innerHTML = "";
+    headers.forEach((h, i) => {
+        const opt = document.createElement("option");
+        opt.value = i; opt.textContent = h || `Col ${i+1}`;
+        searchColumnSel.appendChild(opt);
+        if (/content|desc|text|description/i.test(h)) searchColumnSel.value = i;
+    });
+}
+function populateOutputCheckboxes() {
+    const drop = document.getElementById('columnDropdown');
+    // Master "Select All" is now unchecked by default
+    drop.innerHTML = `<div class="flex items-center p-3 hover:bg-slate-50 border-b cursor-pointer"><input type="checkbox" id="selectAllCols" class="mr-3"><span class="text-sm font-bold">Select All</span></div>`;
+    
+    headers.forEach((h, i) => {
+        const div = document.createElement("div");
+        div.className = "flex items-center p-2.5 hover:bg-slate-50 cursor-pointer";
+        // NO columns checked by default now per request
+        div.innerHTML = `<input type="checkbox" value="${i}" class="col-checkbox mr-3"><span class="text-sm truncate">${h}</span>`;
+        div.onclick = e => { if(e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } updateBtnText(); }
+        drop.appendChild(div);
+    });
+    
+    document.getElementById("selectAllCols").addEventListener("change", e => { document.querySelectorAll(".col-checkbox").forEach(c => c.checked = e.target.checked); updateBtnText(); });
+    updateBtnText();
+}
+function updateBtnText() {
+    const len = document.querySelectorAll(".col-checkbox:checked").length;
+    document.querySelector("#toggleColumnsBtn span").textContent = len ? `${len} Cols Selected` : "Select Columns";
+}
+
+// --- SEARCH & DETAIL LOGIC ---
+function processFile() {
+    toggleDetailView(false);
+    const colIdx = parseInt(searchColumnSel.value);
+    const mode = searchMode.value;
+    const snippet = document.getElementById("keepLine").checked;
+    const appendContact = document.getElementById("appendContact").checked;
+    const createNumbers = document.getElementById("createNumbers").checked;
+    const dropDup = document.getElementById("dropDuplicates").checked;
+    const dedupPh = document.getElementById("dedupNumbers").checked;
+
+    let keys = [];
+    if(["hospital","school","college"].includes(mode)) {
+        if(mode==="hospital") keys = HOSPITAL_INTENT;
+        else if(mode==="school") keys = SCHOOL_INTENT;
+        else keys = COLLEGE_INTENT;
+    } else {
+        document.querySelectorAll(".keyword-input").forEach(i => { if(i.value.trim()) keys.push(i.value.trim().toLowerCase()); });
+    }
+    if(!keys.length) return alert("Enter keywords");
+
+    const checks = document.querySelectorAll(".col-checkbox:checked");
+    outputCols = Array.from(checks).map(cb => parseInt(cb.value));
+    
+    // Safety: If NO columns are checked, search won't show anything unless we default back to the searched column
+    if(outputCols.length === 0) {
+        alert("Please select at least one output column in Step 3.");
+        return;
+    }
+
+    results = [];
+    const seen = new Set();
+    const highlightRegex = new RegExp(`(${keys.map(escapeRegExp).join("|")})`, "gi");
+
+    for (let i = 1; i < workbookData.length; i++) {
+        const row = workbookData[i]; if(!row || !row[colIdx]) continue;
+        const rawContent = String(row[colIdx]||"");
+        const txt = rawContent.toLowerCase();
+        
+        let match = (["hospital","school","college","4"].includes(mode)) 
+            ? ((mode==="4") ? txt.includes(keys[0]) : keys.some(k=>txt.includes(k)))
+            : keys.every(k=>txt.includes(k));
+        
+        if(!match) continue;
+
+        let displayHtml = snippet ? genSnippet(rawContent, keys) : toSentenceCase(rawContent);
+        if(keys.length) displayHtml = displayHtml.replace(highlightRegex, `<span class="highlight">$1</span>`);
+        
+        if (snippet && rawContent.length > 200) {
+            displayHtml += ` <span class="text-indigo-600 font-bold ml-1 cursor-pointer hover:underline" onclick="showFullMessage(${results.length})">[Read Full]</span>`;
+        }
+        if(appendContact) {
+            const n = extNums(row[colIdx], dedupPh);
+            if(n) displayHtml += `<span class="text-slate-500 font-bold text-lg block mt-1">${n}</span>`;
+        }
+
+        if(dropDup) { const sig = JSON.stringify(row); if(seen.has(sig)) continue; seen.add(sig); }
+
+        const resultRow = [];
+        outputCols.forEach(idx => {
+            const cellText = String(row[idx]||"");
+            resultRow.push({ html: (idx===colIdx) ? displayHtml : toSentenceCase(cellText), text: cellText });
+        });
+        if(createNumbers) {
+            const phs = extNums(row[colIdx], dedupPh);
+            resultRow.push({ html: phs, text: phs });
+        }
+        
+        resultRow._fullSearchContent = rawContent.replace(highlightRegex, `<span class="highlight">$1</span>`);
+        results.push(resultRow);
+    }
+    displayResults(createNumbers);
+}
+
+function displayResults(hasPh) {
+    const render = results.slice(0, 500);
+    let hHtml = "";
+    outputCols.forEach((idx, i) => hHtml += `<th onclick="sortRes(${i})" class="px-6 py-4 border-b uppercase text-xs font-bold text-slate-500 bg-slate-50 cursor-pointer hover:bg-slate-100">${headers[idx]}</th>`);
+    if(hasPh) hHtml += `<th class="px-6 py-4 border-b uppercase text-xs font-bold text-slate-500 bg-slate-50">Phones</th>`;
+    document.getElementById('tableHeader').innerHTML = hHtml;
+    
+    if(!results.length) {
+        document.getElementById('resultTable').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+        document.getElementById('resultStatus').textContent = "No matches";
+        document.getElementById('downloadButtons').classList.add('hidden');
+        return;
+    }
+
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('resultTable').classList.remove('hidden');
+    document.getElementById('downloadButtons').classList.remove('hidden');
+    document.getElementById('tableBody').innerHTML = render.map((r,i) => `<tr class="${i%2?'bg-slate-50':'bg-white'} hover:bg-blue-50">${r.map(c=>`<td class="px-6 py-4 border-b">${c.html}</td>`).join('')}</tr>`).join('');
+    document.getElementById('resultStatus').textContent = `${results.length} found`;
+}
+
+function showFullMessage(index) {
+    if(!results[index]) return;
+    document.getElementById('detailContent').innerHTML = results[index]._fullSearchContent;
+    toggleDetailView(true);
+}
+
+function toggleDetailView(show) {
+    document.getElementById('tableView').classList.toggle('hidden', show);
+    document.getElementById('detailView').classList.toggle('hidden', !show);
+    document.getElementById('backToResultsBtn').classList.toggle('hidden', !show);
+    document.getElementById('resultsHeading').textContent = show ? "Message Detail" : "Results";
+    if(show) document.getElementById('resultsWrapper').scrollTop = 0;
+}
+
+// --- EXPORT & UTILS ---
+function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
+function cleanText(text) {
+    if (!text) return "";
+    let clean = text;
+    SCRUB_KEYWORDS.forEach(kw => {
+        const regex = new RegExp(`((?:\\S+\\s+){0,3})${escapeRegExp(kw)}((?:\\s+\\S+){0,3})`, "gi");
+        clean = clean.replace(regex, " "); 
+    });
+    clean = clean.replace(new RegExp(`((?:\\S+\\s+){0,4})${PHONE_REGEX_GLOBAL.source}((?:\\s+\\S+){0,4})`, "gi"), " ");
+    return clean.replace(/\s+/g, ' ').trim();
+}
+function executeExport(type) {
+    document.getElementById('exportModal').classList.add('hidden');
+    const includeNumbers = document.getElementById('exportIncludePhones').checked;
+    const createNumbers = document.getElementById("createNumbers").checked;
+    let h = outputCols.map(i => headers[i]);
+    if (createNumbers && includeNumbers) h.push("Phones");
+    const d = results.map(r => r.map(c => includeNumbers ? c.text : cleanText(c.text)));
+    if (type === 'excel') {
+        const ws = XLSX.utils.aoa_to_sheet([h, ...d]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Results");
+        XLSX.writeFile(wb, "results.xlsx");
+    } else {
+        let table = `<table border="1"><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
+        d.forEach(row => table += `<tr>${row.map(x=>`<td>${x}</td>`).join('')}</tr>`);
+        table += `</tbody></table>`;
+        const b = new Blob([`<html><body>${table}</body></html>`], {type:"text/html"});
+        const a = document.createElement("a"); a.href=URL.createObjectURL(b); a.download="results.html"; a.click();
+    }
+}
+
+function extNums(t, d) {
+    const m = String(t||"").match(PHONE_REGEX_GLOBAL) || [];
+    let n = m.map(x=>x.replace(/[^\d+]/g,'')).filter(x=>x.length>6);
+    if(d) n = [...new Set(n)];
+    return n.join(", ");
+}
+function toSentenceCase(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ""; }
+function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function genSnippet(t, k) {
+    const l = t.toLowerCase();
+    for(let x of k) { const i=l.indexOf(x); if(i>-1) return (i>0?"...":"") + t.substring(Math.max(0,i-40), i+200) + "..."; }
+    return t.substring(0,200);
+}
+function sortRes(idx) {
+    if(currentSort.col===idx) currentSort.dir = currentSort.dir==='asc'?'desc':'asc';
+    else { currentSort.col=idx; currentSort.dir='asc'; }
+    const m = currentSort.dir==='asc'?1:-1;
+    results.sort((a,b) => {
+        const va=(a[idx]?.text||"").toLowerCase(); const vb=(b[idx]?.text||"").toLowerCase();
+        return va<vb ? -1*m : (va>vb ? 1*m : 0);
+    });
+    displayResults(document.getElementById("createNumbers").checked);
+}
+function renderKeywordInputs() {
+    const m = searchMode.value;
+    const k = keywordInputsDiv;
+    k.innerHTML = "";
+    if(["hospital","school","college"].includes(m)) { k.innerHTML=`<div class="text-sm text-blue-600 bg-blue-50 p-2 rounded">Intent: ${m.toUpperCase()}</div>`; return; }
+    const n = m==="4"?1:parseInt(m);
+    for(let i=0;i<n;i++) k.innerHTML += `<input class="keyword-input w-full bg-slate-50 border border-slate-200 rounded p-2 mb-2 text-sm" placeholder="Keyword ${i+1}">`;
+}
+
+document.getElementById('toggleColumnsBtn').onclick = e => { e.stopPropagation(); document.getElementById('columnDropdown').classList.toggle('hidden'); };
+document.onclick = e => { if(!e.target.closest('#toggleColumnsBtn') && !e.target.closest('#columnDropdown')) document.getElementById('columnDropdown').classList.add('hidden'); };
+document.getElementById('fontSizeSelect').onchange = function() { document.getElementById('tableBody').className = `bg-white divide-y divide-slate-100 font-bold text-slate-800 leading-relaxed ${this.value}`; };
+
+</script>
+</body>
+</html>
